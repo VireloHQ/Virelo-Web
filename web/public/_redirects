@@ -1,0 +1,11 @@
+# Only browser routes get the SPA shell; missing JS/CSS must return 404.
+/app / 200
+/setup / 200
+/setup/ / 200
+/library / 200
+/favorites / 200
+/settings / 200
+/shorts / 200
+/app/* / 200
+/watch/* / 200
+/title/* / 200

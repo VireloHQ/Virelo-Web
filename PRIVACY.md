@@ -1,0 +1,17 @@
+# Privacy
+
+Virelo Web runs in the browser and does not upload selected video files.
+
+## Stored on this device
+
+The app stores its library index, generated thumbnails, settings, favorites, and watch progress in IndexedDB for the current site origin. Browsers that support persistent directory handles may also store the permission handle needed to reconnect a selected folder.
+
+The original video files remain in their existing folders. Playback uses temporary browser-generated `blob:` URLs.
+
+## Network behavior
+
+Virelo Web loads its application files from the site that hosts it. It does not include analytics, advertising, account registration, external metadata providers, or automatic requests containing video titles and filenames.
+
+## Removing access
+
+Removing a library deletes its Virelo index and generated thumbnails. Folder permissions can also be revoked from the browser's site settings. Clearing site data removes all Virelo Web settings and local indexes for that origin.

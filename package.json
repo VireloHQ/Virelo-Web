@@ -1,0 +1,62 @@
+{
+  "name": "virelo-web",
+  "version": "0.1.0",
+  "description": "A private, browser-only video library for local files.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.web.json && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.web.json",
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test tests/*.test.mjs",
+    "check": "npm run typecheck && npm run build && npm test"
+  },
+  "keywords": [
+    "client-side",
+    "file-system-access-api",
+    "virelo",
+    "video",
+    "streaming",
+    "media-library",
+    "pwa"
+  ],
+  "author": "Riyoway",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VireloHQ/Virelo-Web.git"
+  },
+  "bugs": {
+    "url": "https://github.com/VireloHQ/Virelo-Web/issues"
+  },
+  "homepage": "https://virelo.riyo.me",
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "5.3.0",
+    "@heroui/react": "^3.2.5",
+    "@heroui/styles": "^3.2.2",
+    "@mediabunny/aac-encoder": "^1.56.2",
+    "@mediabunny/ac3": "^1.56.2",
+    "@phosphor-icons/react": "^2.1.10",
+    "@tanstack/react-query": "^5.102.8",
+    "@tanstack/react-router": "^1.170.36",
+    "matroska-subtitles": "^3.3.2",
+    "mediabunny": "^1.56.2",
+    "react": "^19.3.0",
+    "react-aria": "^3.52.1",
+    "react-aria-components": "^1.21.1",
+    "react-dom": "^19.3.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  }
+}

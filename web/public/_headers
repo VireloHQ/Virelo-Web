@@ -1,0 +1,70 @@
+/*
+  Content-Security-Policy: default-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; font-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+  Cross-Origin-Opener-Policy: same-origin
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+/
+  Cache-Control: no-cache
+
+/index.html
+  Cache-Control: no-cache
+
+/setup
+  Cache-Control: no-cache
+
+/setup/
+  Cache-Control: no-cache
+
+/app
+  Cache-Control: no-cache
+
+/app/*
+  Cache-Control: no-cache
+
+/library
+  Cache-Control: no-cache
+
+/favorites
+  Cache-Control: no-cache
+
+/settings
+  Cache-Control: no-cache
+
+/shorts
+  Cache-Control: no-cache
+
+/watch/*
+  Cache-Control: no-cache
+
+/title/*
+  Cache-Control: no-cache
+
+/404.html
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Cache-Control: no-cache
+
+/sw.js
+  Cache-Control: no-cache
+
+/robots.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=3600
+
+/sitemap.xml
+  Content-Type: application/xml; charset=utf-8
+  Cache-Control: public, max-age=3600
+
+/llms.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=3600
+
+/llms-full.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=3600
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

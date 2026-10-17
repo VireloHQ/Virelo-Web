@@ -1,0 +1,563 @@
+import { useEffect, useRef, useState } from 'react';
+import { ArrowsOut, FastForward, Pause, PictureInPicture, Play, Repeat, Rewind, SkipBack, SkipForward, SpeakerHigh, SpeakerSlash, SpinnerGap } from '@phosphor-icons/react';
+import { api } from '../api';
+import { prepareBrowserAudio, prepareBrowserQuality, prepareBrowserSubtitle, probeBrowserPlayback } from '../browser-transcode';
+import { useLocalMediaUrl } from '../hooks/useLocalMediaUrl';
+import { playVideo } from '../utils/media-playback';
+import { readQualityPreference, resolvePreferredQuality, saveQualityPreference, type QualityPreference } from '../utils/playback-quality';
+import { resolvePlaybackTrackSelection, savePlaybackTrackSelection } from '../utils/playback-tracks';
+import { toggleFullscreen } from '../utils/fullscreen';
+import { DraggableCaption, HiddenSubtitleTrack } from './DraggableCaption';
+import { FavoriteButton } from './FavoriteButton';
+import { PlaybackSettingsMenu } from './PlaybackSettingsMenu';
+import { RepeatControl } from './RepeatControl';
+import { PlayerActionMenu } from './PlayerActionMenu';
+import { type RepeatMode } from '../utils/playback-repeat';
+import { useBackgroundPlayback } from '../hooks/useBackgroundPlayback';
+import { usePlaybackVolume } from '../hooks/usePlaybackVolume';
+import { useVideoPresentation } from '../hooks/useVideoPresentation';
+import { VideoSettingsMenu } from './VideoSettingsMenu';
+import type { MediaItem, PlaybackInfo } from '../types';
+import '../player-ui.css';
+import '../video-settings.css';
+
+interface PlayerProps {
+  item: MediaItem;
+  queue?: MediaItem[];
+  queueIndex?: number;
+  onEnded?: () => void;
+  onNext?: () => void;
+  onPrev?: () => void;
+  canGoNext?: boolean;
+  canGoPrev?: boolean;
+  autoPlay?: boolean;
+  repeatMode?: RepeatMode;
+  onRepeatChange?: (mode:RepeatMode) => void;
+}
+
+export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=true,canGoPrev=true,autoPlay,repeatMode,onRepeatChange}:PlayerProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const sourceTransition = useRef(false);
+  const wantsPlayback = useRef(Boolean(autoPlay));
+  const [playRequested, setPlayRequested] = useState(Boolean(autoPlay));
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const presentation = useVideoPresentation(item.id, containerRef);
+  const lastProgress = useRef(0);
+  const playbackItemId = useRef(item.id);
+  const controlsTimer = useRef<number | null>(null);
+  const audioPreparationToken = useRef(0);
+  const subtitlePreparationToken = useRef(0);
+  const qualityPreparationToken = useRef(0);
+  const qualityBlocked = useRef(true);
+  const audioRetryTimer = useRef<number|null>(null);
+  const audioRetryCount = useRef(0);
+  const pendingAudio = useRef<{token:number;position:number;shouldPlay:boolean}|null>(null);
+  const pendingQuality = useRef<{token:number;position:number;shouldPlay:boolean;restoreExternalAudio:boolean;url:string|null}|null>(null);
+  const initialPositionApplied = useRef(false);
+  const source = useLocalMediaUrl(item.id);
+  const [mediaFile,setMediaFile] = useState<File|null>(null);
+  const [playbackInfo,setPlaybackInfo] = useState<PlaybackInfo|null>(null);
+  const [selectedAudio,setSelectedAudio] = useState<number|null>(null);
+  const [selectedSubtitle,setSelectedSubtitle] = useState<number|null>(null);
+  const [activeCaption,setActiveCaption] = useState('');
+  const [externalAudioUrl,setExternalAudioUrl] = useState('');
+  const [qualityUrl,setQualityUrl] = useState('');
+  const [selectedQuality,setSelectedQuality] = useState<number|null>(null);
+  const [qualityPreference,setQualityPreference] = useState(()=>readQualityPreference(false));
+  const [subtitleUrl,setSubtitleUrl] = useState('');
+  const [preparing,setPreparing] = useState<'audio'|'subtitles'|'quality'|null>(null);
+  const [preparationProgress,setPreparationProgress] = useState(0);
+  const [playbackError,setPlaybackError] = useState('');
+  const [playbackReady,setPlaybackReady] = useState(false);
+  const [playing,setPlaying] = useState(false);
+  const [current,setCurrent] = useState(0);
+  const [duration,setDuration] = useState(item.duration || 0);
+  const {volume,setVolume,muted,setMuted} = usePlaybackVolume();
+  const [pip,setPip] = useState(false);
+  const [pipSupported,setPipSupported] = useState(false);
+  const [singleRepeat,setSingleRepeat] = useState<RepeatMode>('off');
+  const repeat=repeatMode??singleRepeat;
+  const changeRepeat=onRepeatChange??setSingleRepeat;
+  const [contextPosition,setContextPosition]=useState<{x:number;y:number;keyboard?:boolean}|null>(null);
+  const [controlsVisible,setControlsVisible] = useState(true);
+  useEffect(()=>{
+    const player=containerRef.current, controls=player?.querySelector<HTMLElement>('.player-controls');
+    if(!player||!controls)return;
+    const update=()=>player.style.setProperty('--player-controls-height',`${controls.offsetHeight+14}px`);
+    const observer=new ResizeObserver(update);observer.observe(controls);update();
+    return()=>observer.disconnect();
+  },[]);
+
+  const background=useBackgroundPlayback(item.id,videoRef,wantsPlayback,{
+    transition:sourceTransition,
+    resume:resumeFromBackground,
+    play:()=>{wantsPlayback.current=true;setPlayRequested(true);resumeFromBackground();},
+    pause:pausePlayback
+  });
+
+  useEffect(()=>{
+    sourceTransition.current=true;
+    wantsPlayback.current=Boolean(autoPlay);
+    setPlayRequested(Boolean(autoPlay));
+    playbackItemId.current=item.id;
+    setContextPosition(null);
+    audioPreparationToken.current++;
+    subtitlePreparationToken.current++;
+    qualityPreparationToken.current++;
+    qualityBlocked.current=true;
+    pendingAudio.current=null;
+    pendingQuality.current=null;
+    initialPositionApplied.current=false;
+    audioRef.current?.pause();
+    if(audioRetryTimer.current!==null)window.clearTimeout(audioRetryTimer.current);
+    audioRetryTimer.current=null;
+    audioRetryCount.current=0;
+    lastProgress.current=0;
+    setMediaFile(null);
+    setPlaybackInfo(null);
+    setSelectedAudio(null);
+    setSelectedSubtitle(null);
+    setActiveCaption('');
+    setExternalAudioUrl('');
+    setQualityUrl('');
+    setSelectedQuality(null);
+    setSubtitleUrl('');
+    setPreparing(null);
+    setPreparationProgress(0);
+    setPlaybackError('');
+    setPlaybackReady(false);
+    setPlaying(false);
+    setCurrent(0);
+    setDuration(item.duration||0);
+  },[item.id]);
+
+  useEffect(()=>{
+    let current=true;
+    api.mediaFile(item.id).then(async(file)=>{
+      if(!current)return;
+      setMediaFile(file);
+      const info=await probeBrowserPlayback(file);
+      if(!current)return;
+      setPlaybackInfo(info);
+      const audio=resolvePlaybackTrackSelection('audio',info.audioTracks,info.defaultAudioStream);
+      setSelectedAudio(audio);
+      const subtitle=resolvePlaybackTrackSelection('subtitles',info.subtitleTracks,null);
+      if(subtitle!==null)void prepareSubtitle(subtitle,file,true);
+      const preference=readQualityPreference(false);
+      setQualityPreference(preference);
+      const height=resolvePreferredQuality(info.qualityOptions,preference);
+      setSelectedQuality(height);
+      if(height!==null&&height!==info.qualityOptions[0]?.height){
+        await prepareQuality(height,audio,file,info,true);
+        return;
+      }
+      qualityBlocked.current=false;
+      if(audio!==null&&(audio!==info.defaultAudioStream||info.requiresAudioTranscode)){
+        const resume=item.progress_position||0;
+        const position=initialPositionApplied.current?(videoRef.current?.currentTime||0):resume>5&&(!item.duration||resume<item.duration*.92)?resume:0;
+        await prepareAudio(audio,file,info,true,position);
+      }
+      else{
+        setPlaybackReady(true);
+        if(wantsPlayback.current)requestVideoPlayback();
+      }
+    }).catch((reason)=>{
+      if(!current)return;
+      if(typeof readQualityPreference(false)==='number'){
+        qualityBlocked.current=true;
+        sourceTransition.current=true;videoRef.current?.pause();audioRef.current?.pause();
+        setPlaybackReady(false);
+        setPlaybackError(reason instanceof Error?reason.message:'The selected quality could not be prepared.');
+        return;
+      }
+      qualityBlocked.current=false;
+      setPlaybackReady(true);
+      if(wantsPlayback.current)requestVideoPlayback();
+    });
+    return()=>{current=false;audioPreparationToken.current++;subtitlePreparationToken.current++;qualityPreparationToken.current++;};
+  },[autoPlay,item.id]);
+
+  useEffect(()=>{setActiveCaption('');},[item.id,selectedSubtitle]);
+
+  useEffect(()=>{
+    const video=videoRef.current;
+    const audio=audioRef.current;
+    if(!video)return;
+    video.muted=externalAudioUrl?true:muted;
+    video.volume=volume;
+    if(audio){audio.volume=volume;audio.muted=muted;}
+  },[externalAudioUrl,muted,volume]);
+
+  useEffect(()=>{
+    const video=videoRef.current;
+    setPipSupported(Boolean(video && document.pictureInPictureEnabled && typeof video.requestPictureInPicture==='function'));
+    if (!video) return;
+    const handleEnterPip=()=>setPip(true);
+    const handleLeavePip=()=>setPip(false);
+    video.addEventListener('enterpictureinpicture',handleEnterPip);
+    video.addEventListener('leavepictureinpicture',handleLeavePip);
+    return ()=>{
+      video.removeEventListener('enterpictureinpicture',handleEnterPip);
+      video.removeEventListener('leavepictureinpicture',handleLeavePip);
+    };
+  },[]);
+
+  useEffect(()=>()=>{if(controlsTimer.current!==null)window.clearTimeout(controlsTimer.current);},[]);
+
+  function usesTouchControls(){return window.matchMedia('(hover: none), (pointer: coarse)').matches;}
+  function revealControls(){
+    if(controlsTimer.current!==null){window.clearTimeout(controlsTimer.current);controlsTimer.current=null;}
+    setControlsVisible(true);
+  }
+  function scheduleControlsHide(){
+    if(controlsTimer.current!==null)window.clearTimeout(controlsTimer.current);
+    const video=videoRef.current;
+    if(!video||video.paused){controlsTimer.current=null;return;}
+    controlsTimer.current=window.setTimeout(()=>{
+      const keyboardFocus=containerRef.current?.querySelector(':focus-visible');
+      if(keyboardFocus||document.querySelector('.player-action-menu')||containerRef.current?.querySelector('.playback-settings button[aria-expanded="true"]')){scheduleControlsHide();return;}
+      setControlsVisible(false);
+      controlsTimer.current=null;
+    },2400);
+  }
+
+  function syncExternalAudio(play=false,audio=audioRef.current){
+    const video=videoRef.current;
+    if(!video||!audio||!externalAudioUrl||background.audioIsClock())return;
+    if(audio.readyState>=HTMLMediaElement.HAVE_METADATA&&Math.abs(audio.currentTime-video.currentTime)>.18){
+      try{audio.currentTime=video.currentTime;}catch{/* wait for the selected track to become seekable */}
+    }
+    audio.playbackRate=video.playbackRate;
+    if(play)requestExternalAudioPlayback(audio);
+  }
+  function requestExternalAudioPlayback(audio=audioRef.current){
+    const video=videoRef.current;
+    if(!video||!audio||!externalAudioUrl||(video.paused&&!background.audioIsClock())||!wantsPlayback.current||audio.readyState<HTMLMediaElement.HAVE_METADATA)return;
+    if(!audio.paused)return;
+    const result=audio.play();
+    if(!result)return;
+    void result.then(()=>{
+      audioRetryCount.current=0;
+      if(audioRetryTimer.current!==null)window.clearTimeout(audioRetryTimer.current);
+      audioRetryTimer.current=null;
+    }).catch(()=>{
+      if(videoRef.current!==video||audioRef.current!==audio||(video.paused&&!background.audioIsClock())||!wantsPlayback.current||!externalAudioUrl)return;
+      if(audioRetryCount.current>=8)return;
+      audioRetryCount.current++;
+      if(audioRetryTimer.current!==null)return;
+      audioRetryTimer.current=window.setTimeout(()=>{
+        audioRetryTimer.current=null;
+        requestExternalAudioPlayback(audio);
+      },150);
+    });
+  }
+  function requestVideoPlayback(){
+    const video=videoRef.current;
+    const requestItemId=item.id;
+    if(!video||qualityBlocked.current)return;
+    void playVideo(video,()=>wantsPlayback.current&&!qualityBlocked.current&&playbackItemId.current===requestItemId,()=>{
+      setMuted(true);
+      if(audioRef.current)audioRef.current.muted=true;
+    }).then(()=>{if(playbackItemId.current===requestItemId)requestExternalAudioPlayback();});
+  }
+  function pausePlayback(){
+    const video=videoRef.current, audio=audioRef.current;
+    if(background.audioIsClock()&&video&&audio&&externalAudioUrl&&Number.isFinite(audio.currentTime)){
+      video.currentTime=audio.currentTime;
+    }
+    wantsPlayback.current=false;
+    background.suspended.current=false;
+    setPlayRequested(false);
+    setPlaying(false);
+    videoRef.current?.pause();
+    audioRef.current?.pause();
+  }
+  function resumeFromBackground(){
+    const video=videoRef.current, audio=audioRef.current;
+    if(!video||!wantsPlayback.current||!playbackReady||qualityBlocked.current||sourceTransition.current)return;
+    // A hidden video can be suspended while the separate soundtrack keeps playing.
+    if(background.audioIsClock()&&externalAudioUrl&&audio&&!audio.paused&&Number.isFinite(audio.currentTime)){
+      video.currentTime=audio.currentTime;
+    }
+    background.suspended.current=false;
+    requestVideoPlayback();
+  }
+  function reportBackgroundAudio(audio:HTMLAudioElement){
+    if(!background.audioIsClock()||!externalAudioUrl)return;
+    setCurrent(audio.currentTime);
+    if(Math.abs(audio.currentTime-lastProgress.current)>5){
+      lastProgress.current=audio.currentTime;
+      void api.progress(playbackItemId.current,audio.currentTime,duration);
+    }
+  }
+  function toggle(){
+    const video=videoRef.current;
+    if(!video)return;
+    const preparingPlayback=preparing==='audio'||preparing==='quality';
+    const next=preparingPlayback||background.suspended.current?!wantsPlayback.current:video.paused;
+    wantsPlayback.current=next;
+    setPlayRequested(next);
+    if(next){audioRetryCount.current=0;requestVideoPlayback();}
+    else {pausePlayback();}
+  }
+  function handleVideoClick(){if(usesTouchControls()&&!controlsVisible){revealControls();return;}toggle();revealControls();}
+  function seek(value:number){
+    const video=videoRef.current;if(!video)return;
+    video.currentTime=value;
+    const audio=audioRef.current;
+    if(audio&&externalAudioUrl&&audio.readyState>=HTMLMediaElement.HAVE_METADATA){try{audio.currentTime=value;}catch{/* retry on seeked */}}
+    setCurrent(value);
+  }
+  function seekBy(seconds:number){const v=videoRef.current;if(!v)return;seek(Math.max(0,Math.min(v.duration || duration,current + seconds)));}
+  function toggleMute(){const next=!muted;setMuted(next);if(externalAudioUrl){if(audioRef.current)audioRef.current.muted=next;}else if(videoRef.current)videoRef.current.muted=next;}
+  function setVol(value:number){const v=videoRef.current;if(v)v.volume=value;if(audioRef.current)audioRef.current.volume=value;setMuted(false);setVolume(value);}
+  async function fullscreen(){const container=containerRef.current;const video=videoRef.current;if(!container||!video)return;await toggleFullscreen(container,video);}
+  async function togglePip(){const v=videoRef.current;if(!v||!pipSupported)return;if(document.pictureInPictureElement)await document.exitPictureInPicture();else await v.requestPictureInPicture().catch(()=>{});}
+  async function prepareAudio(stream:number,file=mediaFile,info=playbackInfo,initial=false,resumeAt?:number){
+    if(!file||!info)return;
+    if(!initial&&selectedAudio===stream)return;
+    const token=++audioPreparationToken.current;
+    const video=videoRef.current;
+    const shouldResume=wantsPlayback.current;
+    const position=resumeAt??(video?.currentTime||0);
+    setSelectedAudio(stream);
+    const track=info.audioTracks.find((candidate)=>candidate.index===stream);
+    const canUseOriginal=stream===info.defaultAudioStream&&track?.supported&&['aac','flac','mp3','opus','vorbis'].includes(track.codec);
+    if(canUseOriginal){
+      const audio=audioRef.current;
+      audio?.pause();
+      audio?.removeAttribute('src');
+      audio?.load();
+      pendingAudio.current=null;
+      setExternalAudioUrl('');
+      setPreparing(null);
+      setPlaybackReady(true);
+      if(video){video.muted=muted;video.currentTime=position;}
+      if(shouldResume)queueMicrotask(()=>{if(token===audioPreparationToken.current&&wantsPlayback.current)requestVideoPlayback();});
+      return;
+    }
+    sourceTransition.current=true;
+    video?.pause();
+    audioRef.current?.pause();
+    pendingAudio.current={token,position,shouldPlay:shouldResume};
+    setPlaybackReady(false);
+    setPreparing('audio');setPreparationProgress(0);setPlaybackError('');
+    try{
+      const url=await prepareBrowserAudio(file,stream,(progress)=>{if(token===audioPreparationToken.current)setPreparationProgress(progress);});
+      if(token!==audioPreparationToken.current)return;
+      setExternalAudioUrl(url);
+    }catch(reason){if(token===audioPreparationToken.current){pendingAudio.current=null;setPlaybackReady(true);setPlaybackError(reason instanceof Error?reason.message:'The selected audio track could not be prepared.');}}
+    finally{if(token===audioPreparationToken.current)setPreparing(null);}
+  }
+  async function prepareQuality(height:number,audioStream=selectedAudio,file=mediaFile,info=playbackInfo,initial=false){
+    if(!file||!info||(!initial&&!qualityBlocked.current&&selectedQuality===height&&audioStream===selectedAudio))return;
+    const originalHeight=info.qualityOptions[0]?.height;
+    if(!originalHeight)return;
+    const token=++qualityPreparationToken.current;
+    const video=videoRef.current;
+    const position=initial?(item.progress_position||0):(video?.currentTime||0);
+    const shouldPlay=wantsPlayback.current;
+    sourceTransition.current=true;
+    qualityBlocked.current=true;
+    video?.pause();audioRef.current?.pause();
+    setSelectedQuality(height);
+    setPlaybackReady(false);setPlaybackError('');setPreparing('quality');setPreparationProgress(0);
+    const selectedTrack=info.audioTracks.find((track)=>track.index===audioStream);
+    const directOriginalAudio=audioStream===info.defaultAudioStream&&selectedTrack?.supported&&['aac','flac','mp3','opus','vorbis'].includes(selectedTrack.codec);
+    pendingQuality.current={token,position,shouldPlay,restoreExternalAudio:height===originalHeight&&!directOriginalAudio&&audioStream!==null,url:null};
+    try{
+      if(height===originalHeight){
+        pendingQuality.current.url=source.url;
+        setExternalAudioUrl('');
+        setQualityUrl('');
+        if(video&&video.currentSrc===source.url)handleLoadedMetadata(video);
+      }else{
+        const url=await prepareBrowserQuality(file,height,audioStream,(progress)=>{if(token===qualityPreparationToken.current)setPreparationProgress(progress);});
+        if(token!==qualityPreparationToken.current)return;
+        pendingQuality.current!.url=url;
+        setExternalAudioUrl('');
+        setQualityUrl(url);
+        if(video&&video.currentSrc===url)handleLoadedMetadata(video);
+      }
+    }catch(reason){
+      if(token===qualityPreparationToken.current){
+        pendingQuality.current=null;setPlaybackReady(false);
+        setPlaybackError((reason instanceof Error?reason.message:'The selected quality could not be prepared.')+' Choose another quality to continue; your quality limit has been kept.');
+      }
+    }finally{if(token===qualityPreparationToken.current)setPreparing(null);}
+  }
+  function selectQuality(preference:QualityPreference) {
+    if(!playbackInfo)return;
+    saveQualityPreference(preference);
+    setQualityPreference(preference);
+    const height=resolvePreferredQuality(playbackInfo.qualityOptions,preference);
+    if(height!==null)void prepareQuality(height);
+  }
+  function handleLoadedMetadata(video:HTMLVideoElement){
+    playbackItemId.current=item.id;setDuration(video.duration||item.duration||0);
+    const quality=pendingQuality.current;
+    if(quality&&quality.token===qualityPreparationToken.current){
+      if(!quality.url||video.currentSrc!==quality.url)return;
+      video.currentTime=quality.position;
+      pendingQuality.current=null;
+      sourceTransition.current=false;
+      qualityBlocked.current=false;
+      if(quality.restoreExternalAudio&&selectedAudio!==null){
+        void prepareAudio(selectedAudio,mediaFile,playbackInfo,true);
+      }else{
+        setPlaybackReady(true);
+        if(wantsPlayback.current)requestVideoPlayback();
+      }
+      return;
+    }
+    if(initialPositionApplied.current)return;
+    initialPositionApplied.current=true;
+    const resume=item.progress_position||0;
+    if(resume>5&&(!video.duration||resume<video.duration*.92))video.currentTime=resume;
+  }
+  function selectAudio(stream:number){
+    if(!playbackInfo||!savePlaybackTrackSelection('audio',playbackInfo.audioTracks,stream))return;
+    if(stream===selectedAudio)return;
+    setSelectedAudio(stream);
+    const originalHeight=playbackInfo?.qualityOptions[0]?.height;
+    if(qualityBlocked.current||(selectedQuality!==null&&originalHeight!==undefined&&selectedQuality!==originalHeight)){
+      if(selectedQuality===null)return;
+      void prepareQuality(selectedQuality,stream);
+      return;
+    }
+    void prepareAudio(stream);
+  }
+  function finishPreparedAudio(audio:HTMLAudioElement){
+    const pending=pendingAudio.current;
+    const video=videoRef.current;
+    if(!pending||pending.token!==audioPreparationToken.current||!video||audio.readyState<HTMLMediaElement.HAVE_METADATA)return;
+    try{audio.currentTime=pending.position;}catch{return;}
+    video.currentTime=pending.position;
+    audio.volume=volume;audio.muted=muted;audio.playbackRate=video.playbackRate;
+    pendingAudio.current=null;
+    sourceTransition.current=false;
+    setPlaybackReady(true);
+    if(wantsPlayback.current){
+      const result=video.play();
+      if(result)void result.then(()=>requestExternalAudioPlayback(audio)).catch(()=>{});
+    }
+  }
+  function selectSubtitle(stream:number|null){
+    if(playbackInfo&&savePlaybackTrackSelection('subtitles',playbackInfo.subtitleTracks,stream))void prepareSubtitle(stream);
+  }
+  async function prepareSubtitle(stream:number|null,file=mediaFile,initial=false){
+    const token=++subtitlePreparationToken.current;
+    setSelectedSubtitle(stream);setPlaybackError('');
+    setSubtitleUrl('');
+    if(stream===null||!file)return;
+    if(!initial){setPreparing('subtitles');setPreparationProgress(0);}
+    try{
+      const url=await prepareBrowserSubtitle(file,stream);
+      if(token===subtitlePreparationToken.current)setSubtitleUrl(url);
+    }
+    catch(reason){if(token===subtitlePreparationToken.current)setPlaybackError(reason instanceof Error?reason.message:'The selected subtitles could not be prepared.');}
+    finally{if(!initial&&token===subtitlePreparationToken.current)setPreparing(null);}
+  }
+
+  const pauseAction=playing||(playRequested&&(preparing==='audio'||preparing==='quality'));
+  return <div className={`player${queue?.length?' has-queue':''}${controlsVisible?' controls-visible':''}`} ref={containerRef} tabIndex={0} aria-label={item.title+' player'}
+    onContextMenu={event=>{event.preventDefault();event.stopPropagation();revealControls();setContextPosition({x:event.clientX,y:event.clientY});}}
+    onDoubleClick={()=>void fullscreen()} onPointerMove={(event)=>{if(event.pointerType==='mouse'){revealControls();scheduleControlsHide();}}} onPointerDown={revealControls} onPointerUp={scheduleControlsHide} onPointerCancel={scheduleControlsHide} onPointerLeave={scheduleControlsHide} onFocusCapture={revealControls} onBlurCapture={scheduleControlsHide}
+    onKeyDown={event=>{revealControls();scheduleControlsHide();if(event.target===event.currentTarget&&(event.key==='ContextMenu'||(event.shiftKey&&event.key==='F10'))){event.preventDefault();const bounds=event.currentTarget.getBoundingClientRect();setContextPosition({x:bounds.left+24,y:bounds.top+24,keyboard:true});}}}>
+    <video
+      className="video-presentation"
+      style={presentation.style}
+      ref={videoRef}
+      src={qualityUrl||source.url||undefined}
+      playsInline
+      loop={repeat==='one'||(repeat==='queue'&&queue?.length===1)}
+      preload={typeof readQualityPreference(false)==='number'?'none':autoPlay?'auto':'metadata'}
+      autoPlay={false}
+      onClick={handleVideoClick}
+      onVolumeChange={(event)=>{if(!externalAudioUrl){setMuted(event.currentTarget.muted);setVolume(event.currentTarget.volume);}}}
+      onPlay={()=>{if(qualityBlocked.current){videoRef.current?.pause();return;}sourceTransition.current=false;setPlaying(true);syncExternalAudio(true);requestExternalAudioPlayback();revealControls();scheduleControlsHide();}}
+      onPlaying={()=>syncExternalAudio(true)}
+      onWaiting={()=>{if(!background.audioIsClock())audioRef.current?.pause();}}
+      onSeeking={()=>audioRef.current?.pause()}
+      onSeeked={()=>syncExternalAudio(!videoRef.current?.paused)}
+      onPause={(e)=>{if(background.handlePause(e.currentTarget)){requestExternalAudioPlayback();return;}if(!sourceTransition.current){wantsPlayback.current=false;setPlayRequested(false);}audioRef.current?.pause();if(audioRetryTimer.current!==null)window.clearTimeout(audioRetryTimer.current);audioRetryTimer.current=null;audioRetryCount.current=0;setPlaying(false);revealControls();const v=e.currentTarget;void api.progress(playbackItemId.current,v.currentTime,v.duration||duration);}}
+      onLoadedMetadata={(e)=>handleLoadedMetadata(e.currentTarget)}
+      onCanPlay={(e)=>{if(wantsPlayback.current&&playbackReady&&e.currentTarget.paused&&!pendingQuality.current&&!pendingAudio.current)requestVideoPlayback();}}
+      onTimeUpdate={(e)=>{
+        if(background.audioIsClock()&&externalAudioUrl)return;
+        const v=e.currentTarget;setCurrent(v.currentTime);syncExternalAudio(!v.paused);
+        if(Math.abs(v.currentTime-lastProgress.current)>5){lastProgress.current=v.currentTime;void api.progress(playbackItemId.current,v.currentTime,v.duration||duration);}
+      }}
+      onRateChange={()=>syncExternalAudio(false)}
+      onEnded={(e)=>{audioRef.current?.pause();void api.progress(playbackItemId.current,e.currentTarget.duration,e.currentTarget.duration);onEnded?.();}}
+      onError={()=>setPlaybackError('This browser cannot play this video format or codec.')}
+    >
+      {subtitleUrl&&selectedSubtitle!==null&&<HiddenSubtitleTrack
+        key={subtitleUrl}
+        src={subtitleUrl}
+        srcLang={playbackInfo?.subtitleTracks.find((track)=>track.index===selectedSubtitle)?.language||'und'}
+        label={playbackInfo?.subtitleTracks.find((track)=>track.index===selectedSubtitle)?.title||'Subtitles'}
+        onText={setActiveCaption}
+      />}
+    </video>
+    <audio key={externalAudioUrl||'native-audio'} ref={audioRef} src={externalAudioUrl||undefined} preload="auto" onTimeUpdate={event=>reportBackgroundAudio(event.currentTarget)} onLoadedMetadata={(event)=>finishPreparedAudio(event.currentTarget)} onCanPlay={(event)=>finishPreparedAudio(event.currentTarget)}/>
+    <DraggableCaption key={`${item.id}:${selectedSubtitle}`} text={activeCaption} controlsVisible={controlsVisible} containerRef={containerRef} onDraggingChange={(dragging)=>{if(dragging)revealControls();else window.setTimeout(scheduleControlsHide,0);}}/>
+    {source.loading && <div className="player-status"><SpinnerGap className="spin"/><strong>Opening video…</strong><span>Reading the selected local file.</span></div>}
+    {preparing&&preparing!=='subtitles'&&playRequested&&!playing&&<div className="player-status"><SpinnerGap className="spin"/><strong>{preparing==='audio'?'Preparing audio…':preparing==='quality'?`Preparing ${selectedQuality&&selectedQuality>=2160?'4K':`${selectedQuality}p`}…`:'Preparing subtitles…'}</strong><span>{preparationProgress>0?`${Math.round(preparationProgress*100)}% · `:''}{preparing==='audio'?'Only audio is converted locally and cached for this session.':preparing==='quality'?'Creating a lower-resolution local version. It will be reused this session.':'Processing locally in your browser.'}</span></div>}
+    {preparing==='subtitles'&&<span className="sr-only" role="status">Preparing subtitles…</span>}
+    {(source.error || playbackError) && <div className="player-status error"><strong>Playback unavailable</strong><span>{source.error || playbackError}</span></div>}
+    <div className="player-gradient"/>
+    <div className="player-controls" onDoubleClick={event=>event.stopPropagation()}>
+      <input className="player-seek" style={{'--range-fill':`${Math.min(100, duration > 0 ? current/duration*100 : 0)}%`} as React.CSSProperties} aria-label="Seek" type="range" min="0" max={Math.max(duration,1)} step="0.1" value={Math.min(current,Math.max(duration,1))} onChange={(e)=>seek(Number(e.target.value))}/>
+      <div className="player-toolbar">
+        <div className="player-transport">
+        {onPrev && <button onClick={onPrev} aria-label="Previous video" disabled={!canGoPrev}><SkipBack weight="fill"/></button>}
+        <button className="skip-button" onClick={()=>seekBy(-10)} aria-label="Rewind 10 seconds"><Rewind weight="bold"/></button>
+        <button onClick={toggle} aria-label={pauseAction?'Pause':'Play'} aria-busy={preparing==='audio'}>{pauseAction?<Pause weight="fill"/>:<Play weight="fill"/>}</button>
+        <button className="skip-button" onClick={()=>seekBy(10)} aria-label="Fast-forward 10 seconds"><FastForward weight="bold"/></button>
+        {onNext && <button onClick={onNext} aria-label="Next video" disabled={!canGoNext}><SkipForward weight="fill"/></button>}
+        <RepeatControl mode={repeat} hasQueue={Boolean(queue?.length)} onChange={changeRepeat}/>
+        <button onClick={toggleMute} aria-label={muted?'Unmute':'Mute'}>{muted?<SpeakerSlash weight="fill"/>:<SpeakerHigh weight="fill"/>}</button>
+        <input className="volume-slider" style={{'--range-fill':`${muted ? 0 : volume*100}%`} as React.CSSProperties} aria-label="Volume" type="range" min="0" max="1" step="0.05" value={muted?0:volume} onChange={(e)=>setVol(Number(e.target.value))}/>
+        <span className="player-time">{time(current)} / {time(duration)}</span>
+        {queue && queueIndex!==undefined && <span className="player-queue">{queueIndex+1} / {queue.length}</span>}
+        </div>
+        <div className="player-tools">
+        <FavoriteButton item={item} iconOnly />
+        <VideoSettingsMenu key={item.id + ':presentation'} settings={presentation.settings} onChange={presentation.update} onReset={presentation.reset} />
+        {playbackInfo&&<PlaybackSettingsMenu key={item.id}
+          audioTracks={playbackInfo.audioTracks}
+          subtitleTracks={playbackInfo.subtitleTracks}
+          selectedAudio={selectedAudio}
+          selectedSubtitle={selectedSubtitle}
+          qualityOptions={playbackInfo.qualityOptions}
+          selectedQuality={selectedQuality}
+          qualityPreference={qualityPreference}
+          busy={preparing!==null}
+          onSelectAudio={selectAudio}
+          onSelectSubtitle={selectSubtitle}
+          onSelectQuality={selectQuality}
+        />}
+        {pipSupported && <button onClick={()=>void togglePip()} aria-label={pip?'Exit Picture in Picture':'Picture in Picture'} className={pip?'active':''}>{pip?<PictureInPicture weight="fill"/>:<PictureInPicture/>}</button>}
+        <button onClick={()=>void fullscreen()} aria-label="Fullscreen"><ArrowsOut/></button>
+        </div>
+      </div>
+    </div>
+    {contextPosition&&<PlayerActionMenu label="Video actions" position={contextPosition} returnFocus={containerRef.current} onClose={()=>setContextPosition(null)}
+      actions={[
+        {label:pauseAction?'Pause':'Play',icon:pauseAction?<Pause/>:<Play/>,action:toggle},
+        {label:'Rewind 10 seconds',icon:<Rewind/>,action:()=>seekBy(-10)},
+        {label:'Fast-forward 10 seconds',icon:<FastForward/>,action:()=>seekBy(10)},
+        {label:muted?'Unmute':'Mute',icon:muted?<SpeakerSlash/>:<SpeakerHigh/>,action:toggleMute},
+        {label:'Repeat video',icon:<Repeat/>,checked:repeat==='one',action:()=>changeRepeat(repeat==='one'?'off':'one')},
+        {label:'Video settings',content:<VideoSettingsMenu contextMenu settings={presentation.settings} onChange={presentation.update} onReset={presentation.reset} />},
+        ...(['audio','subtitles'] as const).filter(setting=>containerRef.current?.querySelector(`[data-setting="${setting}"]`)).map(setting=>({
+          label:setting==='audio'?'Audio':'Subtitles',action:()=>containerRef.current?.querySelector<HTMLButtonElement>(`[data-setting="${setting}"]`)?.click()
+        })),
+        ...(pipSupported?[{label:pip?'Exit Picture in Picture':'Picture in Picture',icon:<PictureInPicture/>,action:()=>void togglePip()}]:[]),
+        {label:'Fullscreen',icon:<ArrowsOut/>,action:()=>void fullscreen()}
+      ]}/>}
+  </div>;
+}
+function time(value:number){if(!Number.isFinite(value))return '0:00';const h=Math.floor(value/3600);const m=Math.floor(value%3600/60);const s=Math.floor(value%60);return h?`${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`:`${m}:${String(s).padStart(2,'0')}`;}

@@ -1,0 +1,53 @@
+# Virelo
+
+Virelo is a private video library for files a user already owns. It presents local folders through a streaming-style interface with search, favorites, watch progress, folder queues, details, and a Shorts-style feed.
+
+Official site: https://virelo.riyo.me/
+Setup guide: https://virelo.riyo.me/setup
+Web player: https://virelo.riyo.me/app
+Web source: https://github.com/VireloHQ/Virelo-Web
+CLI source: https://github.com/VireloHQ/Virelo
+npm package: https://www.npmjs.com/package/virelo
+
+## Privacy model
+
+The Virelo web player reads only folders selected by the user through browser file APIs. Selected video files are not uploaded to Virelo, copied to a hosted library, or sent to a third party. Library state such as favorites, settings, thumbnails, and watch progress is stored locally in the browser.
+
+The browser-only web player needs no account. The CLI server is a separate application: Virelo 0.4+ requires sign-in. On first launch, create the administrator account using localhost on the device running the server. Administrators can add users and set library access and permissions in Account Manager.
+
+## Web player
+
+Open https://virelo.riyo.me/app and choose a folder. The browser builds the library on the device. Browser file-system support varies, so users should use a current browser that supports directory selection.
+
+## CLI quick start
+
+Open a terminal in a folder containing videos and run:
+
+    npx virelo
+
+Choose another media folder explicitly:
+
+    npx virelo --media ~/Videos
+
+On a trusted local network, expose the library to another device with:
+
+    npx virelo --host 0.0.0.0
+
+Do not expose a Virelo instance directly to the public internet. The LAN mode is intended for trusted private networks.
+
+## Supported environments
+
+The Virelo CLI setup guide covers Windows, macOS, Linux, and Android through Termux. Optional FFmpeg and ffprobe support enables codec probing, thumbnails, and HLS fallback for formats a browser cannot play directly.
+
+## Main features
+
+- Browse videos through Home, Library, Details, Player, and Shorts views.
+- Search selected folders and mark videos as favorites.
+- Resume videos from saved watch progress.
+- Queue and play a folder in sequence.
+- Play portrait clips in a responsive Shorts-style feed.
+- Keep selected files and library state on the user's device.
+
+## Help and source
+
+Use the setup guide for commands and troubleshooting. Report reproducible web player problems at https://github.com/VireloHQ/Virelo-Web/issues and CLI problems at https://github.com/VireloHQ/Virelo/issues. Do not attach private media, local file paths, account credentials, or browser storage.

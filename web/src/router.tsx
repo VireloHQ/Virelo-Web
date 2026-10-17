@@ -1,0 +1,101 @@
+import { createRootRoute, createRoute, createRouter, Outlet, redirect } from '@tanstack/react-router';
+import { createRouteView, RouteErrorView, RouteNavigationGuard, RoutePendingView } from './components/RouteRecovery';
+import { Header } from './components/Header';
+import { MobileNav } from './components/MobileNav';
+import { NotFoundView } from './views/NotFoundView';
+import type { SortKey } from './types';
+import { validateShortsSearch } from './utils/shorts-navigation';
+
+const LandingRouteView = createRouteView(() => import('./views/LandingView'), 'LandingView', 'landing');
+const SetupGuideRouteView = createRouteView(() => import('./views/SetupGuideView'), 'SetupGuideView', 'setup');
+const HomeRouteView = createRouteView(() => import('./views/HomeView'), 'HomeView', 'home');
+const FavoritesRouteView = createRouteView(() => import('./views/FavoritesView'), 'FavoritesView', 'library');
+const LibraryRouteView = createRouteView(() => import('./views/LibraryView'), 'LibraryView', 'library');
+const SettingsRouteView = createRouteView(() => import('./views/SettingsView'), 'SettingsView', 'settings');
+const WatchRouteView = createRouteView(() => import('./views/WatchView'), 'WatchView', 'watch');
+const DetailRouteView = createRouteView(() => import('./views/DetailView'), 'DetailView', 'detail');
+const ShortsRouteView = createRouteView(() => import('./views/ShortsView'), 'ShortsView', 'shorts');
+
+function viewForPath(pathname: string) {
+  if (pathname === '/') return LandingRouteView;
+  if (pathname === '/setup' || pathname === '/setup/') return SetupGuideRouteView;
+  const path = pathname.replace(/^\/app(?=\/|$)/, '').replace(/\/$/, '') || '/';
+  if (path === '/') return HomeRouteView;
+  if (path === '/favorites') return FavoritesRouteView;
+  if (path === '/library') return LibraryRouteView;
+  if (path === '/settings') return SettingsRouteView;
+  if (path === '/shorts') return ShortsRouteView;
+  if (/^\/watch\/[^/]+$/.test(path)) return WatchRouteView;
+  if (/^\/title\/[^/]+$/.test(path)) return DetailRouteView;
+}
+
+export interface WatchRouteSearch {
+  queue?: boolean;
+  folder?: string;
+  libraryId?: number;
+  sort?: SortKey;
+  search?: string;
+}
+
+function validateWatchSearch(input: Record<string, unknown>): WatchRouteSearch {
+  return {
+    queue: input.queue === true || input.queue === '1' || input.queue === 'true',
+    folder: typeof input.folder === 'string' && input.folder !== '' ? input.folder.slice(0, 500) : undefined,
+    libraryId: typeof input.libraryId === 'string' && /^\d+$/.test(input.libraryId) ? Number(input.libraryId) : undefined,
+    sort: (['title', 'newest', 'oldest', 'year', 'duration', 'random'] as string[]).includes(String(input.sort ?? '')) ? input.sort as SortKey : undefined,
+    search: typeof input.search === 'string' && input.search !== '' ? input.search.slice(0, 200) : undefined
+  };
+}
+
+function Shell() {
+  return <div className="app-shell"><Header /><main className="page-shell"><Outlet /></main><MobileNav /></div>;
+}
+
+function Root() {
+  return <><RouteNavigationGuard viewForPath={viewForPath} /><Outlet /></>;
+}
+
+const rootRoute = createRootRoute({ component: Root, notFoundComponent: NotFoundView, errorComponent: RouteErrorView });
+const landingRoute = createRoute({ getParentRoute:()=>rootRoute, path:'/', component:LandingRouteView });
+const setupGuideRoute = createRoute({ getParentRoute:()=>rootRoute, path:'setup', component:SetupGuideRouteView });
+const appRoute = createRoute({ getParentRoute:()=>rootRoute, path:'app', component:Shell });
+const appIndexRoute = createRoute({ getParentRoute:()=>appRoute, path:'/', component:HomeRouteView });
+const libraryRoute = createRoute({ getParentRoute:()=>appRoute, path:'library', component:LibraryRouteView });
+const favoritesRoute = createRoute({ getParentRoute:()=>appRoute, path:'favorites', component:FavoritesRouteView });
+const settingsRoute = createRoute({ getParentRoute:()=>appRoute, path:'settings', component:SettingsRouteView });
+const watchRoute = createRoute({ getParentRoute:()=>appRoute, path:'watch/$mediaId', component:WatchRouteView, validateSearch: validateWatchSearch });
+const detailRoute = createRoute({ getParentRoute:()=>appRoute, path:'title/$mediaId', component:DetailRouteView });
+const shortsRoute = createRoute({ getParentRoute:()=>appRoute, path:'shorts', component:ShortsRouteView, validateSearch:validateShortsSearch });
+const legacyLibraryRoute = createRoute({ getParentRoute:()=>rootRoute, path:'library', beforeLoad:()=>{ throw redirect({to:'/app/library'}); } });
+const legacyFavoritesRoute = createRoute({ getParentRoute:()=>rootRoute, path:'favorites', beforeLoad:()=>{ throw redirect({to:'/app/favorites'}); } });
+const legacySettingsRoute = createRoute({ getParentRoute:()=>rootRoute, path:'settings', beforeLoad:()=>{ throw redirect({to:'/app/settings'}); } });
+const legacyShortsRoute = createRoute({ getParentRoute:()=>rootRoute, path:'shorts', validateSearch:validateShortsSearch, beforeLoad:({search})=>{ throw redirect({to:'/app/shorts',search}); } });
+const legacyWatchRoute = createRoute({
+  getParentRoute:()=>rootRoute,
+  path:'watch/$mediaId',
+  validateSearch: validateWatchSearch,
+  beforeLoad:({params,search})=>{ throw redirect({to:'/app/watch/$mediaId',params,search}); }
+});
+const legacyDetailRoute = createRoute({
+  getParentRoute:()=>rootRoute,
+  path:'title/$mediaId',
+  beforeLoad:({params})=>{ throw redirect({to:'/app/title/$mediaId',params}); }
+});
+const routeTree = rootRoute.addChildren([
+  landingRoute,
+  setupGuideRoute,
+  appRoute.addChildren([appIndexRoute, libraryRoute, favoritesRoute, settingsRoute, watchRoute, detailRoute, shortsRoute]),
+  legacyLibraryRoute,
+  legacyFavoritesRoute,
+  legacySettingsRoute,
+  legacyShortsRoute,
+  legacyWatchRoute,
+  legacyDetailRoute
+]);
+export const router = createRouter({
+  routeTree, defaultPreload: 'intent', scrollRestoration: true,
+  defaultErrorComponent: RouteErrorView,
+  defaultPendingComponent: () => <RoutePendingView viewForPath={viewForPath} />,
+  defaultPendingMs: 150
+});
+declare module '@tanstack/react-router' { interface Register { router: typeof router } }

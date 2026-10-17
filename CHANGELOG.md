@@ -1,0 +1,27 @@
+# Changelog
+
+## Unreleased
+
+- Add a visible eight-ray spark burst when saving a favorite from Shorts, the video player or title details. Keep playback and button layout stable, cancel interrupted effects, and use a gentle fade for reduced motion.
+
+- Localize the landing page, setup guide, demo controls and accessibility labels into English, Japanese, Korean and Simplified Chinese. Add a custom header language selector, browser-language detection, persistent local selection and cross-tab synchronization. Keep public metadata and FAQ markup in sync without changing the Virelo page title or translating executable commands.
+
+- Open context menus beside the pointer, with edge-aware left/right placement and side-facing bubble tails. Open Video settings beside its context-menu row as a nested panel, preserving the parent menu and keyboard/focus behavior.
+
+- Add a dedicated Video settings bubble with aspect-preserving fit/fill, 90° rotation and brightness, contrast and saturation sliders. Apply changes without reloading playback or modifying files, reset them for each video, and keep subtitles and controls unaffected. Native Picture in Picture retains the original view.
+
+- Group player viewing controls, theme scrollbars, and add keyboard-accessible video context menus that work in fullscreen.
+- Add explicit repeat-off, repeat-video and repeat-queue modes, retaining the choice between queued videos and supporting single-item queues.
+- Replace framed queue cards with a compact filmstrip; scroll its rail with arrows, wheel, touch and keyboard without changing playback. Keep captions above wrapping controls on narrow screens.
+
+- Added selectable embedded audio and subtitle tracks in the video player.
+- Added private, in-browser AC-3/E-AC-3 to AAC conversion for incompatible audio.
+- Kept switched audio tracks aligned with the video timeline and reliably resumed playback after preparation.
+- Added smooth mouse-wheel navigation to overflowing library and folder chip rows.
+- Kept hover previews at the card's original size and removed redundant preview controls.
+- Added manual lower-resolution playback for local files, with original quality selected by default and no network Auto mode.
+
+- Initial browser-only Virelo Web application.
+- Local folder selection without file uploads.
+- IndexedDB library index, thumbnails, favorites, settings, and watch progress.
+- Direct local playback, responsive library views, Shorts, and PWA support.
