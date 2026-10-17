@@ -5,6 +5,7 @@ Virelo does not provide a movie catalogue. The library and player screenshots us
 | Assets in `web/public/` | Provenance |
 | --- | --- |
 | `favicon-*.png`, `virelo-icon*.png` | Virelo logo supplied by the maintainer, including the transparent version. |
+| `landing/hero-coast.webp` | Hero photograph supplied by the maintainer as `85978.jpg` and described by them as free to use. Re-encoded to WebP at the original 2000 × 1121 resolution with metadata removed; composition unchanged. No specific license or photographer credit was supplied. |
 | `landing/coast-cinema.webp`, `landing/night-cinema.webp`, `landing/orbit-cinema.webp` | Original sample artwork generated for this project. Not frames from third-party films. |
 | `landing/library-*.webp`, `landing/player-*.webp` | Captures of the actual Virelo UI using an isolated synthetic library and the project-created artwork above. |
 | `landing/shorts-blender-demo.mp4`, `landing/shorts-blender-demo.webp` | Actual Virelo Shorts screen recording and poster, captured with fresh browser storage. The three portrait clips are cropped, silent excerpts from Big Buck Bunny and Sintel, by Blender Foundation, licensed under CC BY 3.0. No downloaded social-media footage or third-party soundtrack is included. |

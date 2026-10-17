@@ -16,6 +16,17 @@ test('public project links and account claims distinguish the web player from th
   }
 });
 
+test('the landing hero bundles the supplied coast photograph without a fictional film caption', async () => {
+  const component = await read('web/src/views/LandingView.tsx');
+  assert.match(component, /className="landing-hero-art" src="\/landing\/hero-coast\.webp"/);
+  assert.doesNotMatch(component, /landing-hero-caption/);
+  const image = await readFile(new URL('../web/public/landing/hero-coast.webp', import.meta.url));
+  assert.equal(image.toString('ascii', 0, 4), 'RIFF');
+  assert.equal(image.toString('ascii', 8, 12), 'WEBP');
+  assert.ok(image.length > 1000 && image.length < 500_000);
+  assert.match(await read('ASSETS.md'), /85978\.jpg/);
+});
+
 test('the shipping demo bundles the Blender recording, poster and attribution', async () => {
   const component = await read('web/src/components/ShortsDemo.tsx');
   for (const file of ['shorts-blender-demo.mp4', 'shorts-blender-demo.webp']) {
