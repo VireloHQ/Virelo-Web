@@ -70,11 +70,6 @@ export const publicMessages = {
     "이미 가지고 있는 영상을 위해 만들었습니다. 무료로 이용하세요.",
     "免费使用，专为你已有的视频打造。"
   ],
-  "Sample artwork. Bring your own videos.": [
-    "画像はサンプルです。自分の動画を追加して使えます。",
-    "예시 이미지입니다. 가지고 있는 영상으로 이용하세요.",
-    "图片仅为示例，请使用你自己的视频。"
-  ],
   "Familiar to browse.": [
     "見慣れた使い心地で、",
     "익숙하게 둘러보고,",
@@ -429,6 +424,11 @@ export const publicMessages = {
     "実際のショート動画の再生画面",
     "실제 Virelo Shorts 화면",
     "真实的 Virelo Shorts 界面"
+  ],
+  "Excerpt credits and edits": [
+    "映像のクレジット・編集内容",
+    "영상 출처 및 편집 내역",
+    "视频来源与编辑说明"
   ],
   "Pause Shorts demo": [
     "ショート動画のデモを一時停止",

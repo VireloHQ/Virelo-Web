@@ -21,12 +21,13 @@ try {
     await page.evaluate(()=>document.fonts.ready);
     await page.locator('.landing-preview').scrollIntoViewIfNeeded();await imageReady();await page.evaluate(()=>scrollTo(0,0));
     check(await page.locator('h1').count()===1,'one H1 '+width);
+    check(await page.locator('.landing-hero-art').evaluate(image=>image.currentSrc.endsWith('/landing/hero-coast.webp')&&image.naturalWidth===2000&&image.naturalHeight===1121),'supplied hero photograph decodes '+width);
     check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'no horizontal overflow '+width);
     const launch=await page.locator('.landing-hero-actions a').first().boundingBox();
     check(launch.width>=44&&launch.height>=44&&launch.x>=0&&launch.x+launch.width<=width,'primary CTA fits '+width);
     check(launch.y+launch.height<=height,'primary CTA in first viewport '+width);
     if(width===390){
-      check(await page.locator('.landing-hero-art').evaluate(image=>getComputedStyle(image).objectPosition.startsWith('94%')),'latest mobile crop in production');
+      check(await page.locator('.landing-hero-art').evaluate(image=>getComputedStyle(image).objectPosition.startsWith('65%')),'coast photograph is framed for mobile');
       const secondary=await page.locator('.landing-hero-actions a').last().boundingBox();
       check(Math.abs(launch.width-secondary.width)<1,'mobile action widths match');
     }

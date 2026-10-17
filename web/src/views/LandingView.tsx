@@ -42,7 +42,7 @@ function LandingContent() {
 
     <main id="landing-main" tabIndex={-1}>
       <section className="landing-hero" aria-labelledby="landing-title">
-        <img className="landing-hero-art" src="/landing/coast-cinema.webp" alt="" width="1672" height="941" fetchPriority="high"/>
+        <img className="landing-hero-art" src="/landing/hero-coast.webp" alt="" width="2000" height="1121" fetchPriority="high"/>
         <div className="landing-hero-shade"/>
         <div className="landing-hero-content landing-container">
           <h1 id="landing-title">{t("Your collection.")}<br/>{t("Now showing.")}</h1>
@@ -50,7 +50,6 @@ function LandingContent() {
           <div className="landing-hero-actions"><Link to="/app" className="landing-button landing-button-primary"><Play weight="fill"/>{t("Open web player")}</Link><a href="#start" className="landing-button landing-button-secondary" onClick={()=>{setMode('cli');setCopyState('idle');}}><TerminalWindow/>{t("Run locally")}</a></div>
           <p className="landing-hero-note">{t("Free to use. Built for the videos you already have.")}</p>
         </div>
-        <div className="landing-hero-caption"><span>The Long Way Home</span><small>{t("Sample artwork. Bring your own videos.")}</small></div>
       </section>
 
       <section className="landing-experience landing-container" id="experience" aria-labelledby="experience-title">
