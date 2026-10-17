@@ -107,6 +107,9 @@ html:lang(ko) .landing-page :is(h1,h2,h3) { word-break:keep-all; }
 .landing-demo-caption button { display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:0 8px; border:0; background:none; color:#ddd; font-size:12px; cursor:pointer; }
 .landing-demo-caption svg { width:14px; height:14px; }
 .landing-demo-caption button:disabled { opacity:.5; cursor:default; }
+.landing-demo-credits { margin:2px 0 0; color:var(--landing-muted); font-size:11px; line-height:1.7; }
+.landing-demo-credits a { color:inherit; text-decoration:underline; text-underline-offset:3px; }
+.landing-demo-credits a:hover { color:#f5f5f5; }
 .landing-start { background:var(--landing-surface); padding:88px 0; }
 .landing-start-layout { display:grid; grid-template-columns:1fr 1fr; gap:clamp(60px,10vw,160px); }
 .landing-start-copy>p { max-width:400px; margin:20px 0 0; color:var(--landing-muted); font-size:19px; line-height:1.65; }

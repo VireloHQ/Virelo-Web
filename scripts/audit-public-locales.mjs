@@ -93,6 +93,24 @@ try {
           check((await page.locator('.landing-copy-status').textContent()).includes(text(locale, 'Command copied. Open a terminal in your video folder and paste it.')), 'localized copy feedback');
           await page.locator('.landing-shorts-demo').scrollIntoViewIfNeeded();
           check(await page.locator('.landing-shorts-demo video').getAttribute('aria-label') === text(locale, 'Virelo Shorts demonstration'), 'localized demo description');
+          const demo = page.locator('.landing-shorts-demo');
+          check(await demo.getByRole('link', { name: text(locale, 'Excerpt credits and edits'), exact: true }).getAttribute('href') === '/landing/shorts-blender-credits.txt', 'localized excerpt credit link');
+          check(await demo.locator('video').getAttribute('poster') === '/landing/shorts-blender-demo.webp', 'Blender poster replaces the generated scene');
+          if (width === 390) {
+            await page.waitForFunction(() => document.querySelector('.landing-shorts-demo video')?.getAttribute('src') === '/landing/shorts-blender-demo.mp4');
+            check(await demo.locator('video').evaluate(video => video.paused && video.muted && !video.controls), 'reduced motion and native controls respected');
+            const credits = await page.request.get(base + '/landing/shorts-blender-credits.txt');
+            check(credits.ok() && (await credits.text()).includes('Creative Commons Attribution 3.0'), 'built attribution file is accessible');
+            check(await demo.locator('video').evaluate(video => !video.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }))), 'native context menu suppressed');
+            await demo.getByRole('button', { name: text(locale, 'Play Shorts demo'), exact: true }).click();
+            await page.waitForFunction(() => {
+              const video = document.querySelector('.landing-shorts-demo video');
+              return video && !video.paused && video.currentTime > 0.2;
+            });
+            await demo.getByRole('button', { name: text(locale, 'Pause Shorts demo'), exact: true }).click();
+            check(await demo.locator('video').evaluate(video => video.paused), 'custom playback button plays and pauses the Blender recording');
+            await demo.screenshot({ path: join(screenshots, locale.code + '-blender-shorts.png') });
+          }
         } else {
           check(await page.locator('#setup-title').textContent() === text(locale, 'Run Virelo locally.'), 'localized guide title');
           const commands = await page.locator('.setup-page code').allTextContents();

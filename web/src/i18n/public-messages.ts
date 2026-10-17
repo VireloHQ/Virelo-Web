@@ -430,6 +430,11 @@ export const publicMessages = {
     "실제 Virelo Shorts 화면",
     "真实的 Virelo Shorts 界面"
   ],
+  "Excerpt credits and edits": [
+    "映像のクレジット・編集内容",
+    "영상 출처 및 편집 내역",
+    "视频来源与编辑说明"
+  ],
   "Pause Shorts demo": [
     "ショート動画のデモを一時停止",
     "Shorts 데모 일시정지",

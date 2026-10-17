@@ -16,21 +16,29 @@ test('public project links and account claims distinguish the web player from th
   }
 });
 
-test('the shipping demo references only the new project-created media', async () => {
+test('the shipping demo bundles the Blender recording, poster and attribution', async () => {
   const component = await read('web/src/components/ShortsDemo.tsx');
-  for (const file of ['shorts-original-demo.mp4', 'shorts-original-demo.webp']) {
+  for (const file of ['shorts-blender-demo.mp4', 'shorts-blender-demo.webp']) {
     assert.ok(component.includes('/landing/' + file));
     const size = (await stat(new URL('../web/public/landing/' + file, import.meta.url))).size;
     assert.ok(size > 1000 && size < 25 * 1024 * 1024, file);
   }
   const assets = await readdir(new URL('../web/public/landing/', import.meta.url));
-  for (const retired of ['shorts-demo.mp4', 'shorts-demo-poster.webp', 'shorts-mobile-20261009.mp4', 'shorts-mobile-20261009.webp']) {
+  for (const retired of ['shorts-demo.mp4', 'shorts-demo-poster.webp', 'shorts-mobile-20261009.mp4', 'shorts-mobile-20261009.webp', 'shorts-original-demo.mp4', 'shorts-original-demo.webp']) {
     assert.equal(assets.includes(retired), false, retired + ' must not be distributed');
   }
   assert.ok(component.includes('controls={false}'));
   assert.ok(component.includes('onContextMenu={event => event.preventDefault()}'));
   const provenance = await read('ASSETS.md');
   assert.match(provenance, /No downloaded social-media footage/);
+  const credits = await read('web/public/landing/shorts-blender-credits.txt');
+  for (const text of ['Big Buck Bunny', 'Sintel', 'Blender Foundation', 'https://creativecommons.org/licenses/by/3.0/']) {
+    assert.ok(component.includes(text), 'Visible credit: ' + text);
+    assert.ok(credits.includes(text), 'Bundled credit: ' + text);
+    assert.ok(provenance.includes(text), 'Repository credit: ' + text);
+  }
+  assert.match(credits, /cropped/i);
+  assert.ok(component.includes('/landing/shorts-blender-credits.txt'));
 });
 
 test('local credentials and hosting metadata stay out of future commits', async () => {

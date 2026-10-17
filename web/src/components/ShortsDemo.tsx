@@ -27,7 +27,7 @@ export function ShortsDemo() {
     const observer = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
       if (visible && !element.getAttribute('src')) {
-        element.src = '/landing/shorts-original-demo.mp4';
+        element.src = '/landing/shorts-blender-demo.mp4';
         element.load();
       }
       update();
@@ -59,7 +59,7 @@ export function ShortsDemo() {
   return <figure className="landing-shorts-demo">
     <div ref={frame} className="landing-phone" onContextMenu={event => event.preventDefault()}>
       <div className="landing-phone-screen">
-        <video ref={video} muted loop playsInline preload="none" poster="/landing/shorts-original-demo.webp"
+        <video ref={video} muted loop playsInline preload="none" poster="/landing/shorts-blender-demo.webp"
           controls={false} controlsList="nodownload nofullscreen noremoteplayback"
           disablePictureInPicture disableRemotePlayback aria-label={t("Virelo Shorts demonstration")}
           onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onError={() => setFailed(true)} />
@@ -72,5 +72,11 @@ export function ShortsDemo() {
         {playing ? <Pause weight="fill" /> : <Play weight="fill" />}{playing ? t("Pause demo") : t("Play demo")}
       </button>
     </figcaption>
+    <p className="landing-demo-credits">
+      <a href="https://peach.blender.org/about/">Big Buck Bunny</a>{' · '}
+      <a href="https://durian.blender.org/sharing/">Sintel</a><br />
+      © 2008 / 2010 Blender Foundation · <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a><br />
+      <a href="/landing/shorts-blender-credits.txt">{t('Excerpt credits and edits')}</a>
+    </p>
   </figure>;
 }
