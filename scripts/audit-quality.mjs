@@ -162,7 +162,7 @@ try {
   await page.getByRole('button',{name:'Audio',exact:true}).click();await page.getByRole('menuitemradio',{name:/^Two/}).click();
   await page.locator('.player-status.error').waitFor();
   check(await page.locator('.player video').evaluate(v=>v.paused)&&await preference()==='480',mode+' audio-switch failure cannot bypass manual ceiling');
-  await page.evaluate(()=>{window.__failQuality=false;window.__noLower=true;localStorage.setItem('virelo-playback-quality:v1','720');});
+  await page.evaluate(()=>{window.__failQuality=false;window.__noLower=true;localStorage.removeItem('virelo-playback-audio:v1');localStorage.setItem('virelo-playback-quality:v1','720');});
   await page.reload();await page.locator('.splash-screen').waitFor({state:'hidden'});await setup();
   await page.evaluate(()=>{window.__noLower=true;});requested.length=0;await mount(6);
   await page.locator('.player-status.error').waitFor({timeout:45000});
