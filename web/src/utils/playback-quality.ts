@@ -17,7 +17,7 @@ export function readQualityPreference(allowAuto: boolean): QualityPreference {
     } catch { /* Storage can be unavailable; keep the session choice. */ }
   }
   if (preference === 'auto' && !allowAuto) return 'source';
-  return preference ?? (allowAuto ? 'auto' : 'source');
+  return preference ?? 'source';
 }
 
 export function saveQualityPreference(preference: QualityPreference | null) {

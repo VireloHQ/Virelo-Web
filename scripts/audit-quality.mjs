@@ -129,7 +129,7 @@ try {
   await page.getByRole('button',{name:'Quality',exact:true}).click();
   check(await page.getByRole('menuitemradio',{name:/^Auto/}).count()===(mode==='npm-network'?1:0),mode+' Auto is available only on network connections');
   check(await page.getByRole('menuitemradio',{name:/^Original Quality/}).count()===1&&await page.getByRole('menuitemradio',{name:/^1080p/}).count()===1,mode+' Original Quality and 1080p are separate options');
-  if(mode==='npm-network')check(await page.getByRole('menuitemradio',{name:/^Auto/}).getAttribute('aria-checked')==='true',mode+' network default is Auto without preparation');
+  check(await page.getByRole('menuitemradio',{name:/^Original Quality/}).getAttribute('aria-checked')==='true',mode+' default is Original Quality without preparation');
   await page.getByRole('button',{name:'Quality',exact:true}).click();
   await choose(720);await waitVideo(720);
   check(await preference()==='720',mode+' manual quality saved');

@@ -80,7 +80,21 @@ npx wrangler pages dev dist
 
 Keep the existing host until the Pages preview has passed checks for `/`, `/setup`, `/app`, `/app/settings`, and a direct `/app/watch/<id>` URL. Then attach the existing `virelo.riyo.me` custom domain in Pages. Retaining the same HTTPS origin preserves browser library storage and settings; a `pages.dev` preview has separate browser storage. This repository keeps `vercel.json` for rollback compatibility; it is not used by Pages.
 
-Recommended production headers:
+### Deployment verification
+
+After a Git-triggered build succeeds, run `npm run verify:deployment` (or pass
+another production URL). This checks the live landing bundle and compares deployed
+Hero/Shorts/credit bytes to the repository. A successful push alone does not deploy
+a site. When a repository is recreated, reconnect it in the hosting dashboard;
+the same repository URL can refer to a different repository ID.
+
+### Workers Builds
+
+The same static build can be hosted with Workers Builds. Reconnect the existing
+Worker to the intended repository and production branch, and keep its build
+command and static asset directory aligned with `npm run build` and `dist`.
+
+### Recommended headers
 
 ```text
 Cross-Origin-Opener-Policy: same-origin

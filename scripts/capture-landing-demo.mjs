@@ -19,7 +19,7 @@ const items = titles.map(([title,art,duration,progress,overview],i) => ({
   id:i+1,library_id:1,path:title+'.mp4',source_path:title+'.mp4',filename:title+'.mp4',title,
   sort_title:title.toLowerCase(),kind:'movie',series_title:null,season:null,episode:null,year:null,
   duration,width:854,height:480,video_codec:'h264',audio_codec:'aac',container:'mp4',folder:'Films',
-  size:1,mtime:6-i,thumbnail_path:'browser',poster_path:null,backdrop_path:'/landing/'+art+'-cinema.webp',
+  size:1,mtime:6-i,thumbnail_path:'browser',poster_path:null,backdrop_path:'/__demo-artwork/'+art+'-cinema.webp',
   overview,genres:null,external_id:null,liked:i<3?1:0,progress_position:progress,progress_duration:duration,
   progress_updated_at:6-i,progress_completed:0
 }));
@@ -32,6 +32,13 @@ const browser = await chromium.launch({headless:true,executablePath:process.env.
 try {
   const context = await browser.newContext({viewport:{width:1440,height:1050},serviceWorkers:'block',reducedMotion:'reduce',deviceScaleFactor:1});
   const page = await context.newPage();
+  const artwork = new Map(await Promise.all(['coast','night','orbit'].map(async name => [
+    name+'-cinema.webp', await readFile(resolve('assets/demo',name+'-cinema.webp'))
+  ])));
+  await page.route('**/__demo-artwork/*.webp',route=>{
+    const image = artwork.get(new URL(route.request().url()).pathname.split('/').at(-1));
+    return route.fulfill(image ? {body:image,contentType:'image/webp'} : {status:404,body:''});
+  });
   await page.addInitScript(()=>document.addEventListener('play',event=>{if(event.target instanceof HTMLMediaElement)event.target.pause();},true));
   page.on('pageerror',error=>console.error(error.message));
   console.log('Capture browser ready');

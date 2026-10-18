@@ -2,11 +2,11 @@
 
 Virelo does not provide a movie catalogue. The library and player screenshots use synthetic titles, filenames and viewing histories. The Shorts demonstration uses licensed Blender film excerpts, not a catalogue included with the player.
 
-| Assets in `web/public/` | Provenance |
+| Assets (paths relative to `web/public/` unless noted) | Provenance |
 | --- | --- |
 | `favicon-*.png`, `virelo-icon*.png` | Virelo logo supplied by the maintainer, including the transparent version. |
-| `landing/hero-coast.webp` | Hero photograph supplied by the maintainer as `85978.jpg` and described by them as free to use. Re-encoded to WebP at the original 2000 × 1121 resolution with metadata removed; composition unchanged. No specific license or photographer credit was supplied. |
-| `landing/coast-cinema.webp`, `landing/night-cinema.webp`, `landing/orbit-cinema.webp` | Original sample artwork generated for this project. Not frames from third-party films. |
+| `landing/hero-coast.webp` | Project-supplied coastal photograph, declared free to use. Converted to WebP at 2000 × 1121 with metadata removed; composition unchanged. The source license identifier and photographer attribution are not recorded. |
+| `assets/demo/*-cinema.webp` (repository root) | Original sample artwork generated for this project, not frames from third-party films. Capture inputs only; not included in the deployed site. |
 | `landing/library-*.webp`, `landing/player-*.webp` | Captures of the actual Virelo UI using an isolated synthetic library and the project-created artwork above. |
 | `landing/shorts-blender-demo.mp4`, `landing/shorts-blender-demo.webp` | Actual Virelo Shorts screen recording and poster, captured with fresh browser storage. The three portrait clips are cropped, silent excerpts from Big Buck Bunny and Sintel, by Blender Foundation, licensed under CC BY 3.0. No downloaded social-media footage or third-party soundtrack is included. |
 | `landing/shorts-blender-credits.txt` | Attribution, source URLs, edits and license links for the Shorts recording and poster. Linked visibly below the phone mockup and included in built output. |
@@ -28,7 +28,7 @@ Use Node.js 22.16+, FFmpeg/ffprobe, Chromium and an installed Playwright package
 node scripts/capture-shorts-demo.mjs
 ```
 
-Set `VIRELO_DEMO_MEDIA_DIR` to the folder containing the verified, silent 18-second working excerpts `sintel.mp4` and `bunny.mp4`, reused from the Virelo launch-video project. The default is ignored `node_modules/.cache/shorts-blender/sources/`. These working files are not bundled in the repository. The script verifies their SHA-256 hashes before recording:
+Set `VIRELO_DEMO_MEDIA_DIR` to the folder containing the verified, silent 18-second working excerpts `sintel.mp4` and `bunny.mp4`. The default is ignored `node_modules/.cache/shorts-blender/sources/`. These working files are not bundled in the repository. The script verifies their SHA-256 hashes before recording:
 
 | File | SHA-256 |
 | --- | --- |

@@ -24,7 +24,7 @@ test('the landing hero bundles the supplied coast photograph without a fictional
   assert.equal(image.toString('ascii', 0, 4), 'RIFF');
   assert.equal(image.toString('ascii', 8, 12), 'WEBP');
   assert.ok(image.length > 1000 && image.length < 500_000);
-  assert.match(await read('ASSETS.md'), /85978\.jpg/);
+  assert.match(await read('ASSETS.md'), /Project-supplied coastal photograph/);
 });
 
 test('the shipping demo bundles the Blender recording, poster and attribution', async () => {
