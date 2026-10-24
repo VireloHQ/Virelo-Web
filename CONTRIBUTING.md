@@ -27,6 +27,14 @@ options before running them. Use fresh browser storage and synthetic media.
 
 ## Assets and deployment
 
+`node scripts/audit-queue.mjs` starts an isolated Vite server with synthetic media
+and mocked catalog data. It checks horizontal/vertical scrolling, touch and keyboard
+drag sorting, shuffle, repeat, context menus, undo and uninterrupted playback on
+desktop and mobile, including reduced motion. It never uses a personal library.
+Set `VIRELO_TEST_QUEUE_SCENARIO` to `desktop`, `mobile`, `small` or `reduced`
+to run one scenario. Queue edits affect only the current watch session; resetting
+or leaving the queue does not change library contents or source media.
+
 See [ASSETS.md](ASSETS.md) for bundled-media sources, credits and capture tools.
 Keep credentials, generated audit screenshots, personal media and browser profiles
 out of commits. Do not add media without redistribution permission.

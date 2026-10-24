@@ -8,6 +8,7 @@ import { ScanProgress } from '../components/ScanProgress';
 import { Select } from '../components/Select';
 import { SettingsNavigation } from '../components/SettingsNavigation';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
+import { QueueLayoutSetting } from '../components/QueueLayoutSetting';
 import type { QueueBehavior, Settings } from '../types';
 
 const settingsSections = [
@@ -120,6 +121,7 @@ export function SettingsView() {
 
         {activeSection === 'playback' && <section id="settings-panel-playback" className="settings-card settings-section" aria-labelledby="settings-title-playback">
           <div className="settings-card-head"><div><h2 id="settings-title-playback" tabIndex={-1}>Playback</h2><p>Choose what happens when a video ends in a folder queue.</p></div></div>
+          <QueueLayoutSetting/>
           <div className="setting-row"><div className="setting-copy"><div><strong>Queue advance</strong><p>Auto-advance, loop, or manually step through the folder.</p></div></div>
             <Select className="settings-picker" label="Queue advance" value={form.queueBehavior} options={QUEUE_OPTIONS} align="end" onChange={(value)=>setForm({...form, queueBehavior:value as QueueBehavior})}/></div>
         </section>}
