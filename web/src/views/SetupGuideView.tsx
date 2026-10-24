@@ -88,7 +88,7 @@ function SetupGuideContent() {
           <h1 id="setup-title">{t("Run Virelo locally.")}</h1>
           <p>{t("Start Virelo from a video folder, keep it on a predictable local address, or make it available to devices on your trusted network.")}</p>
           <ul className="setup-requirements" aria-label={t("Requirements")}>
-            <li><CheckCircle weight="fill" />{' '}{t("Node.js 22.16 or newer")}</li>
+            <li><CheckCircle weight="fill" />{' '}{t("Node.js 22.23.4+, 24.22.1+ or 26.12.1+ within those release lines")}</li>
             <li><CheckCircle weight="fill" />{' '}{t("Windows, macOS, Linux, or Termux")}</li>
             <li><CheckCircle weight="fill" />{' '}{t("FFmpeg is optional")}</li>
           </ul>

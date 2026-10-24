@@ -33,7 +33,10 @@ Playback support still depends on the video formats and codecs supported by the 
 
 ## Development
 
-Node.js 22.16 or newer is required.
+Use stable Node.js 22.23.4+, 24.22.1+ or 26.12.1+ within those release lines.
+These minimums match the CLI and include the
+[October 2026 security fixes](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases).
+The deployed web player itself does not require Node.js on the viewer's device.
 
 ```bash
 npm ci
@@ -65,7 +68,7 @@ Connect `VireloHQ/Virelo-Web` using **Pages Git integration** and use:
 | Root directory | Repository root (leave empty), not `web` |
 | Build command | `npm run build` |
 | Build output directory | `dist` |
-| Node.js | `22.22.3`, pinned by `.node-version` |
+| Node.js | `22.23.4`, pinned by `.node-version` |
 
 If `NODE_VERSION` is already set in the dashboard, align it with `.node-version`. Do not set the install command to omit development dependencies: TypeScript and Vite are build dependencies. For push-triggered builds, create a Git-integrated Pages project rather than a Direct Upload-only project. See the [Pages build configuration](https://developers.cloudflare.com/pages/configuration/build-configuration/) and [Node.js version settings](https://developers.cloudflare.com/pages/configuration/build-image/).
 

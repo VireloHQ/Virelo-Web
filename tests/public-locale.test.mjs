@@ -68,3 +68,27 @@ test('setup explains account creation without claiming the npm server has no aut
     for (const locale of ['ja', 'ko', 'zh-CN']) assert.notEqual(t(locale, message), message);
   }
 });
+
+test('CLI requirements stay patched and consistent across locales, hosting and static product facts', async () => {
+  const requirements = 'Node.js 22.23.4+, 24.22.1+ or 26.12.1+ within those release lines';
+  const landingMessage = `Requires ${requirements}. Windows, macOS, Linux and Android via Termux. Network access is opt-in; don’t expose Virelo directly to the public internet.`;
+  for (const locale of ['en', 'ja', 'ko', 'zh-CN']) {
+    for (const message of [requirements, landingMessage]) {
+      if (locale !== 'en') assert.notEqual(t(locale, message), message, locale);
+      for (const version of ['22.23.4', '24.22.1', '26.12.1']) assert.ok(t(locale, message).includes(version), locale);
+    }
+  }
+  const read = file => readFile(new URL('../' + file, import.meta.url), 'utf8');
+  assert.ok((await read('web/src/views/LandingView.tsx')).includes(JSON.stringify(landingMessage)));
+  assert.ok((await read('web/src/views/SetupGuideView.tsx')).includes(JSON.stringify(requirements)));
+  for (const file of ['README.md', 'CONTRIBUTING.md', 'SECURITY.md', 'web/index.html', 'web/public/llms-full.txt']) {
+    const text = await read(file);
+    for (const version of ['22.23.4', '24.22.1', '26.12.1']) assert.ok(text.includes(version), file);
+    assert.doesNotMatch(text, /22\.16|22\.22\.3/, file);
+  }
+  const metadata = JSON.parse(await read('package.json'));
+  const lock = JSON.parse(await read('package-lock.json'));
+  assert.equal(metadata.engines.node, '^22.23.4 || ^24.22.1 || ^26.12.1');
+  assert.equal(lock.packages[''].engines.node, metadata.engines.node);
+  assert.equal((await read('.node-version')).trim(), '22.23.4');
+});

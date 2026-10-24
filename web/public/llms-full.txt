@@ -37,6 +37,8 @@ Do not expose a Virelo instance directly to the public internet. The LAN mode is
 
 ## Supported environments
 
+The CLI requires stable Node.js 22.23.4+, 24.22.1+ or 26.12.1+ within those release lines. The browser-only player does not require Node.js on the user's device.
+
 The Virelo CLI setup guide covers Windows, macOS, Linux, and Android through Termux. Optional FFmpeg and ffprobe support enables codec probing, thumbnails, and HLS fallback for formats a browser cannot play directly.
 
 ## Main features

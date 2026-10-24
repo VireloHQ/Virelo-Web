@@ -6,9 +6,10 @@ and API changes first. Update public documentation when behavior changes.
 
 New contributions are licensed under AGPL-3.0-only, as described in [LICENSE](LICENSE). Include any required copyright and license notices for third-party material. This does not change the terms under which earlier contributions were received.
 
-Use Node.js 22.16 or newer. Run `npm ci` followed by `npm run check` before
+Use stable Node.js 22.23.4+, 24.22.1+ or 26.12.1+ within those release lines.
+Run `npm ci` followed by `npm run check` before
 opening a pull request. This typechecks and builds the browser app and runs the
-unit tests. CI checks both Node 22 and 24.
+unit tests. CI checks the latest patches of Node 22, 24 and 26.
 
 ## Browser checks
 

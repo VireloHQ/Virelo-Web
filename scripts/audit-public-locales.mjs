@@ -87,6 +87,7 @@ try {
           check(await page.getByRole('tab', { name: text(locale, 'Player'), exact: true }).getAttribute('aria-selected') === 'true', 'localized keyboard preview');
           await page.getByRole('tab', { name: text(locale, 'Run locally'), exact: true }).click();
           check(await page.locator('.landing-command code').textContent() === 'npx virelo', 'executable command remains unchanged');
+          for (const version of ['22.23.4', '24.22.1', '26.12.1']) check((await page.locator('.landing-start-panel').textContent()).includes(version), 'localized CLI requirement: ' + version);
           await page.locator('.landing-command button').click();
           check(await page.evaluate(() => navigator.clipboard.readText()) === 'npx virelo', 'localized copy preserves command');
           await page.getByRole('status').filter({ hasText: text(locale, 'Command copied. Open a terminal in your video folder and paste it.') }).waitFor();
@@ -113,6 +114,7 @@ try {
           }
         } else {
           check(await page.locator('#setup-title').textContent() === text(locale, 'Run Virelo locally.'), 'localized guide title');
+          for (const version of ['22.23.4', '24.22.1', '26.12.1']) check((await page.locator('.setup-requirements').textContent()).includes(version), 'localized guide requirement: ' + version);
           const commands = await page.locator('.setup-page code').allTextContents();
           if (!commandBaseline) commandBaseline = commands;
           assert.deepEqual(commands, commandBaseline);

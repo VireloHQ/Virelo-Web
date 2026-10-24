@@ -22,7 +22,7 @@ test('Pages receives its host rules and custom 404 in the production build', asy
   for (const file of ['_headers', '_redirects', '404.html']) {
     assert.equal(await readFile(new URL(file, dist), 'utf8'), await readFile(new URL(file, source), 'utf8'), file);
   }
-  assert.equal((await readFile(new URL('../.node-version', import.meta.url), 'utf8')).trim(), '22.22.3');
+  assert.equal((await readFile(new URL('../.node-version', import.meta.url), 'utf8')).trim(), '22.23.4');
 });
 
 test('Pages rewrites application and legacy routes, never missing assets', () => {

@@ -300,10 +300,10 @@ export const publicMessages = {
     "설정 및 네트워크 가이드",
     "设置与网络指南"
   ],
-  "Requires Node.js 22.16+. Windows, macOS, Linux and Android via Termux. Network access is opt-in; don’t expose Virelo directly to the public internet.": [
-    "Node.js 22.16以降が必要です。Windows・macOS・Linuxと、Termuxを使ったAndroidに対応。初期設定では起動した端末からだけ使えます。インターネットには直接公開しないでください。",
-    "Node.js 22.16 이상이 필요합니다. Windows, macOS, Linux와 Termux를 통한 Android를 지원합니다. 네트워크 접근은 선택 사항이며 인터넷에 직접 노출하면 안 됩니다.",
-    "需要 Node.js 22.16 或更高版本。支持 Windows、macOS、Linux，以及通过 Termux 使用的 Android。网络访问需主动开启，请勿直接暴露到公网。"
+  "Requires Node.js 22.23.4+, 24.22.1+ or 26.12.1+ within those release lines. Windows, macOS, Linux and Android via Termux. Network access is opt-in; don’t expose Virelo directly to the public internet.": [
+    "Node.js 22系は22.23.4以降、24系は24.22.1以降、26系は26.12.1以降が必要です。Windows・macOS・Linuxと、Termuxを使ったAndroidに対応。初期設定では起動した端末からだけ使えます。インターネットには直接公開しないでください。",
+    "Node.js 22.23.4+, 24.22.1+ 또는 26.12.1+(각 메이저 버전 내)이 필요합니다. Windows, macOS, Linux와 Termux를 통한 Android를 지원합니다. 네트워크 접근은 선택 사항이며 인터넷에 직접 노출하면 안 됩니다.",
+    "需要 Node.js 22.23.4+、24.22.1+ 或 26.12.1+（限各主版本内）。支持 Windows、macOS、Linux，以及通过 Termux 使用的 Android。网络访问需主动开启，请勿直接暴露到公网。"
   ],
   "A few things to know.": [
     "よくある質問",
@@ -465,10 +465,10 @@ export const publicMessages = {
     "영상 폴더에서 Virelo를 실행하세요. 고정된 로컬 주소로 이용하거나 신뢰할 수 있는 네트워크의 다른 기기에도 접근을 허용할 수 있습니다.",
     "从视频文件夹启动 Virelo，以固定的本地地址使用，或允许受信任网络中的其他设备访问。"
   ],
-  "Node.js 22.16 or newer": [
-    "Node.js 22.16以降",
-    "Node.js 22.16 이상",
-    "Node.js 22.16 或更高版本"
+  "Node.js 22.23.4+, 24.22.1+ or 26.12.1+ within those release lines": [
+    "Node.js 22系は22.23.4以降、24系は24.22.1以降、26系は26.12.1以降",
+    "Node.js 22.23.4+, 24.22.1+ 또는 26.12.1+(각 메이저 버전 내)",
+    "Node.js 22.23.4+、24.22.1+ 或 26.12.1+（限各主版本内）"
   ],
   "Windows, macOS, Linux, or Termux": [
     "Windows・macOS・Linux・Termux",
