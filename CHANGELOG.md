@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Unify app motion with 160–250ms feedback, restrained fades and small surface scales. Keep page text and search layout stationary, use reversible dialog/dropdown transitions, and preserve immediate keyboard operation and reduced-motion preferences.
+
 - Add a visible eight-ray spark burst when saving a favorite from Shorts, the video player or title details. Keep playback and button layout stable, cancel interrupted effects, and use a gentle fade for reduced motion.
 
 - Localize the landing page, setup guide, demo controls and accessibility labels into English, Japanese, Korean and Simplified Chinese. Add a custom header language selector, browser-language detection, persistent local selection and cross-tab synchronization. Keep public metadata and FAQ markup in sync without changing the Virelo page title or translating executable commands.
