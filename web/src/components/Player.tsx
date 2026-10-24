@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowsOut, FastForward, Pause, PictureInPicture, Play, Repeat, Rewind, SkipBack, SkipForward, SpeakerHigh, SpeakerSlash, SpinnerGap } from '@phosphor-icons/react';
+import { ArrowsOut, Gear, FastForward, Pause, PictureInPicture, Play, Repeat, Rewind, SkipBack, SkipForward, SpeakerHigh, SpeakerSlash, SpinnerGap } from '@phosphor-icons/react';
 import { api } from '../api';
 import { prepareBrowserAudio, prepareBrowserQuality, prepareBrowserSubtitle, probeBrowserPlayback } from '../browser-transcode';
 import { useLocalMediaUrl } from '../hooks/useLocalMediaUrl';
@@ -10,14 +10,13 @@ import { toggleFullscreen } from '../utils/fullscreen';
 import { DraggableCaption, HiddenSubtitleTrack } from './DraggableCaption';
 import { FavoriteButton } from './FavoriteButton';
 import { PlaybackSettingsMenu } from './PlaybackSettingsMenu';
-import { RepeatControl } from './RepeatControl';
 import { ShortsContextMenu, ShortsPlayerControls, type ShortsPlaybackOptions } from './ShortsPlayerControls';
 import { PlayerActionMenu } from './PlayerActionMenu';
 import { type RepeatMode } from '../utils/playback-repeat';
 import { useBackgroundPlayback } from '../hooks/useBackgroundPlayback';
 import { usePlaybackVolume } from '../hooks/usePlaybackVolume';
 import { useVideoPresentation } from '../hooks/useVideoPresentation';
-import { VideoSettingsMenu } from './VideoSettingsMenu';
+import { VideoSettingsPanel } from './VideoSettingsPanel';
 import type { MediaItem, PlaybackInfo } from '../types';
 import '../player-ui.css';
 import '../video-settings.css';
@@ -507,15 +506,19 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
   }
 
   const pauseAction=playing||(playRequested&&(preparing==='audio'||preparing==='quality'));
-  const playbackSettings=playbackInfo&&<PlaybackSettingsMenu key={item.id}
-    audioTracks={playbackInfo.audioTracks}
-    subtitleTracks={playbackInfo.subtitleTracks}
+  const playbackSettings=<PlaybackSettingsMenu key={item.id}
+    audioTracks={playbackInfo?.audioTracks??[]}
+    subtitleTracks={playbackInfo?.subtitleTracks??[]}
     selectedAudio={selectedAudio}
     selectedSubtitle={selectedSubtitle}
-    qualityOptions={playbackInfo.qualityOptions}
+    qualityOptions={playbackInfo?.qualityOptions??[]}
     selectedQuality={selectedQuality}
     qualityPreference={qualityPreference}
     busy={preparing!==null}
+    unified={!shorts}
+    pictureControls={!shorts&&<VideoSettingsPanel settings={presentation.settings} onChange={presentation.update} onReset={presentation.reset}/>}
+    repeatMode={repeat} hasQueue={Boolean(queue?.length)} onRepeatChange={changeRepeat}
+    pip={pip} onPip={pipSupported?()=>void togglePip():undefined}
     onSelectAudio={selectAudio}
     onSelectSubtitle={selectSubtitle}
     onSelectQuality={selectQuality}
@@ -576,12 +579,11 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
       <input className="player-seek" style={{'--range-fill':`${Math.min(100, duration > 0 ? current/duration*100 : 0)}%`} as React.CSSProperties} aria-label="Seek" type="range" min="0" max={Math.max(duration,1)} step="0.1" value={Math.min(current,Math.max(duration,1))} onChange={(e)=>seek(Number(e.target.value))}/>
       <div className="player-toolbar">
         <div className="player-transport">
-        {onPrev && <button onClick={onPrev} aria-label="Previous video" disabled={!canGoPrev}><SkipBack weight="fill"/></button>}
+        {onPrev && <button className="queue-previous" onClick={onPrev} aria-label="Previous video" disabled={!canGoPrev}><SkipBack weight="fill"/></button>}
         <button className="skip-button" onClick={()=>seekBy(-10)} aria-label="Rewind 10 seconds"><Rewind weight="bold"/></button>
         <button onClick={toggle} aria-label={pauseAction?'Pause':'Play'} aria-busy={preparing==='audio'}>{pauseAction?<Pause weight="fill"/>:<Play weight="fill"/>}</button>
         <button className="skip-button" onClick={()=>seekBy(10)} aria-label="Fast-forward 10 seconds"><FastForward weight="bold"/></button>
-        {onNext && <button onClick={onNext} aria-label="Next video" disabled={!canGoNext}><SkipForward weight="fill"/></button>}
-        <RepeatControl mode={repeat} hasQueue={Boolean(queue?.length)} onChange={changeRepeat}/>
+        {onNext && <button className="queue-next" onClick={onNext} aria-label="Next video" disabled={!canGoNext}><SkipForward weight="fill"/></button>}
         <button onClick={toggleMute} aria-label={muted?'Unmute':'Mute'}>{muted?<SpeakerSlash weight="fill"/>:<SpeakerHigh weight="fill"/>}</button>
         <input className="volume-slider" style={{'--range-fill':`${muted ? 0 : volume*100}%`} as React.CSSProperties} aria-label="Volume" type="range" min="0" max="1" step="0.05" value={muted?0:volume} onChange={(e)=>setVol(Number(e.target.value))}/>
         <span className="player-time">{time(current)} / {time(duration)}</span>
@@ -589,9 +591,7 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
         </div>
         <div className="player-tools">
         <FavoriteButton item={item} iconOnly />
-        <VideoSettingsMenu key={item.id + ':presentation'} settings={presentation.settings} onChange={presentation.update} onReset={presentation.reset} />
         {playbackSettings}
-        {pipSupported && <button onClick={()=>void togglePip()} aria-label={pip?'Exit Picture in Picture':'Picture in Picture'} className={pip?'active':''}>{pip?<PictureInPicture weight="fill"/>:<PictureInPicture/>}</button>}
         <button onClick={()=>void fullscreen()} aria-label="Fullscreen"><ArrowsOut/></button>
         </div>
       </div>
@@ -606,10 +606,7 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
         {label:'Fast-forward 10 seconds',icon:<FastForward/>,action:()=>seekBy(10)},
         {label:muted?'Unmute':'Mute',icon:muted?<SpeakerSlash/>:<SpeakerHigh/>,action:toggleMute},
         {label:'Repeat video',icon:<Repeat/>,checked:repeat==='one',action:()=>changeRepeat(repeat==='one'?'off':'one')},
-        {label:'Video settings',content:<VideoSettingsMenu contextMenu settings={presentation.settings} onChange={presentation.update} onReset={presentation.reset} />},
-        ...(['audio','subtitles'] as const).filter(setting=>containerRef.current?.querySelector(`[data-setting="${setting}"]`)).map(setting=>({
-          label:setting==='audio'?'Audio':'Subtitles',action:()=>containerRef.current?.querySelector<HTMLButtonElement>(`[data-setting="${setting}"]`)?.click()
-        })),
+        {label:'Settings',icon:<Gear/>,action:()=>containerRef.current?.querySelector<HTMLButtonElement>('[data-setting="settings"]')?.click()},
         ...(pipSupported?[{label:pip?'Exit Picture in Picture':'Picture in Picture',icon:<PictureInPicture/>,action:()=>void togglePip()}]:[]),
         {label:'Fullscreen',icon:<ArrowsOut/>,action:()=>void fullscreen()}
       ]}/>}
