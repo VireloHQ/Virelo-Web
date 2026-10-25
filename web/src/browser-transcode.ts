@@ -14,6 +14,7 @@ import { registerAc3Decoder } from '@mediabunny/ac3';
 import { registerAacEncoder } from '@mediabunny/aac-encoder';
 import matroskaSubtitlesUrl from 'matroska-subtitles/dist/matroska-subtitles.min.js?url';
 import type { PlaybackInfo, PlaybackTrack } from './types';
+import { streamBrowserConversion, type BrowserStreamOptions } from './browser-stream';
 
 const DIRECT_AUDIO_CODECS=new Set(['aac','flac','mp3','opus','vorbis']);
 const MATROSKA_EXTENSIONS=new Set(['mkv','mka','mks','webm']);
@@ -98,68 +99,72 @@ async function probe(file:File):Promise<PlaybackInfo>{
   }finally{input.dispose();}
 }
 
-export async function prepareBrowserQuality(file:File,height:number,audioStream:number|null,onProgress?:(progress:number)=>void){
-  const key=`${file.name}:${file.size}:${file.lastModified}:quality:${height}:audio:${audioStream??'none'}`;
-  const cached=qualityCache.get(key);
-  if(cached)return cached;
-  if(!(await canEncodeVideo('avc')))throw new Error('This browser cannot create a lower-resolution AVC version.');
-  await ensureAacEncoder();
-  const input=createInput(file);
-  const target=new BufferTarget();
-  const output=new Output({format:new Mp4OutputFormat({fastStart:'in-memory'}),target});
-  try{
-    const allTracks=await input.getTracks();
-    const selectedAudio=audioStream===null?null:allTracks[audioStream];
-    const conversion=await Conversion.init({
-      input,
-      output,
-      video:{codec:'avc',height,quality:new Quality({bitrate:qualityBitrate(height)}),keyFrameInterval:2,forceTranscode:true},
-      audio:(track)=>track===selectedAudio
-        ?{codec:'aac',quality:new Quality({bitrate:192_000}),numberOfChannels:Math.min(2,track.numberOfChannels||2),forceTranscode:true}
-        :{discard:true},
-      showWarnings:false
+async function configureConversion(file: File, output: Output, stream: number | null, height?: number, start?: number) {
+  const input = createInput(file);
+  try {
+    const tracks = await input.getTracks(), audio = stream === null ? null : tracks[stream];
+    if (stream !== null && !audio?.isAudioTrack()) throw new Error('The selected audio track no longer exists.');
+    const conversion = await Conversion.init({
+      input, output,
+      trim: start === undefined ? undefined : { start },
+      video: height === undefined ? { discard: true } :
+        { codec: 'avc', height, quality: new Quality({ bitrate: qualityBitrate(height) }), keyFrameInterval: 1, forceTranscode: true },
+      audio: async track => {
+        if (track !== audio) return { discard: true };
+        const channels = await track.getNumberOfChannels();
+        // AAC already supported by MP4/MSE can be remuxed without decoding and encoding it again.
+        if (await track.getCodec() === 'aac' && channels <= 2) return {};
+        return { codec: 'aac', quality: new Quality({ bitrate: 192_000 }), numberOfChannels: Math.min(2, channels || 2), forceTranscode: true };
+      },
+      showWarnings: false
     });
-    if(!conversion.isValid)throw new Error(conversion.discardedTracks[0]?.reason||'This quality cannot be created in this browser.');
-    conversion.onProgress=(progress)=>onProgress?.(Math.max(0,Math.min(1,progress)));
-    await conversion.execute();
-    if(!target.buffer)throw new Error('The converted video was empty.');
-    const url=URL.createObjectURL(new Blob([target.buffer],{type:'video/mp4'}));
-    qualityCache.set(key,url);
-    onProgress?.(1);
-    return url;
-  }finally{input.dispose();}
+    if (!conversion.isValid) throw new Error(conversion.discardedTracks[0]?.reason || 'The selected format cannot be converted.');
+    return { conversion, dispose: () => input.dispose() };
+  } catch (error) { input.dispose(); throw error; }
 }
 
-export async function prepareBrowserAudio(file:File,stream:number,onProgress?:(progress:number)=>void){
-  const key=`${file.name}:${file.size}:${file.lastModified}:audio:${stream}`;
-  const cached=audioCache.get(key);
-  if(cached)return cached;
+export async function prepareBrowserQuality(file: File, height: number, audioStream: number | null,
+  onProgress?: (progress: number) => void, options?: BrowserStreamOptions) {
+  if (options?.signal.aborted) throw new DOMException('Playback preparation cancelled.', 'AbortError');
+  const key = `${file.name}:${file.size}:${file.lastModified}:quality:${height}:audio:${audioStream ?? 'none'}`;
+  const cached = qualityCache.get(key); if (cached) return cached;
+  if (!(await canEncodeVideo('avc'))) throw new Error('This browser cannot create a lower-resolution AVC version.');
   await ensureAacEncoder();
-  const input=createInput(file);
-  const target=new BufferTarget();
-  const output=new Output({format:new Mp4OutputFormat({fastStart:'in-memory'}),target});
-  try{
-    const allTracks=await input.getTracks();
-    const selected=allTracks[stream];
-    if(!selected?.isAudioTrack())throw new Error('The selected audio track no longer exists.');
-    const conversion=await Conversion.init({
-      input,
-      output,
-      video:{discard:true},
-      audio:(track)=>track===selected
-        ?{codec:'aac',quality:new Quality({bitrate:192_000}),numberOfChannels:Math.min(2,track.numberOfChannels||2),forceTranscode:true}
-        :{discard:true},
-      showWarnings:false
-    });
-    if(!conversion.isValid)throw new Error(conversion.discardedTracks.find(({track})=>track===selected)?.reason||'The selected audio track cannot be converted.');
-    conversion.onProgress=(progress)=>onProgress?.(Math.max(0,Math.min(1,progress)));
-    await conversion.execute();
-    if(!target.buffer)throw new Error('The converted audio was empty.');
-    const url=URL.createObjectURL(new Blob([target.buffer],{type:'audio/mp4'}));
-    audioCache.set(key,url);
-    onProgress?.(1);
-    return url;
-  }finally{input.dispose();}
+  if (options && Number.isFinite(options.duration) && options.duration > 0 && typeof MediaSource !== 'undefined')
+    return streamBrowserConversion(options, (output, start) => configureConversion(file, output, audioStream, height, start));
+  const target = new BufferTarget(), output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target });
+  const prepared = await configureConversion(file, output, audioStream, height);
+  const cancel = () => { void prepared.conversion.cancel().catch(() => {}); };
+  options?.signal.addEventListener('abort', cancel, { once: true });
+  try {
+    if (options?.signal.aborted) { await prepared.conversion.cancel(); throw new DOMException('Playback preparation cancelled.', 'AbortError'); }
+    prepared.conversion.onProgress = progress => onProgress?.(Math.max(0, Math.min(1, progress)));
+    await prepared.conversion.execute();
+    if (!target.buffer) throw new Error('The converted video was empty.');
+    const url = URL.createObjectURL(new Blob([target.buffer], { type: 'video/mp4' }));
+    qualityCache.set(key, url); onProgress?.(1); return url;
+  } finally { options?.signal.removeEventListener('abort', cancel); prepared.dispose(); }
+}
+
+export async function prepareBrowserAudio(file: File, stream: number, onProgress?: (progress: number) => void, options?: BrowserStreamOptions) {
+  if (options?.signal.aborted) throw new DOMException('Playback preparation cancelled.', 'AbortError');
+  const key = `${file.name}:${file.size}:${file.lastModified}:audio:${stream}`;
+  const cached = audioCache.get(key); if (cached) return cached;
+  await ensureAacEncoder();
+  if (options && Number.isFinite(options.duration) && options.duration > 0 && typeof MediaSource !== 'undefined')
+    return streamBrowserConversion(options, (output, start) => configureConversion(file, output, stream, undefined, start));
+  const target = new BufferTarget(), output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target });
+  const prepared = await configureConversion(file, output, stream);
+  const cancel = () => { void prepared.conversion.cancel().catch(() => {}); };
+  options?.signal.addEventListener('abort', cancel, { once: true });
+  try {
+    if (options?.signal.aborted) { await prepared.conversion.cancel(); throw new DOMException('Playback preparation cancelled.', 'AbortError'); }
+    prepared.conversion.onProgress = progress => onProgress?.(Math.max(0, Math.min(1, progress)));
+    await prepared.conversion.execute();
+    if (!target.buffer) throw new Error('The converted audio was empty.');
+    const url = URL.createObjectURL(new Blob([target.buffer], { type: 'audio/mp4' }));
+    audioCache.set(key, url); onProgress?.(1); return url;
+  } finally { options?.signal.removeEventListener('abort', cancel); prepared.dispose(); }
 }
 
 export async function prepareBrowserSubtitle(file:File,stream:number){

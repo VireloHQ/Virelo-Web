@@ -27,6 +27,12 @@ options before running them. Use fresh browser storage and synthetic media.
 
 ## Assets and deployment
 
+`node scripts/audit-browser-streaming.mjs` checks incremental browser conversion
+with generated 60-second, dual-audio media. It verifies startup before full-file
+conversion, forward/backward seeks, bounded buffering, cancellation and the actual
+selected audio frequency. Reported timings describe the test machine, not a
+guaranteed latency for every codec or device.
+
 `node scripts/audit-queue.mjs` starts an isolated Vite server with synthetic media
 and mocked catalog data. It checks horizontal/vertical scrolling, touch and keyboard
 drag sorting, shuffle, repeat, context menus, undo and uninterrupted playback on

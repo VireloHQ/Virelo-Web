@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Start browser quality/audio playback incrementally from the current position instead of converting the entire file first. Remux compatible AAC, bound conversion and buffering, cancel superseded work, preserve the latest audio selection across seeks, and avoid re-encoding video for audio-only changes.
+
 - Add editable horizontal and vertical playback queues, including a desktop side panel, touch/keyboard drag sorting, shuffle, repeat toggling, play-next, queue-only removal, undo and reset. Save layout preferences on each device and keep current playback stable during edits and refreshes. Remove competing scroll snapping and load queues beyond 500 videos.
 
 - Complete confirmation-dialog exits through the overlay lifecycle, including interrupted transitions. Read motion durations in milliseconds or seconds so production CSS minification preserves startup timing.

@@ -52,6 +52,8 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
   const audioPreparationToken = useRef(0);
   const subtitlePreparationToken = useRef(0);
   const qualityPreparationToken = useRef(0);
+  const audioPreparationAbort = useRef<AbortController | null>(null);
+  const qualityPreparationAbort = useRef<AbortController | null>(null);
   const qualityBlocked = useRef(true);
   const audioRetryTimer = useRef<number|null>(null);
   const audioRetryCount = useRef(0);
@@ -62,6 +64,8 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
   const [mediaFile,setMediaFile] = useState<File|null>(null);
   const [playbackInfo,setPlaybackInfo] = useState<PlaybackInfo|null>(null);
   const [selectedAudio,setSelectedAudio] = useState<number|null>(null);
+  const latestAudio = useRef<number|null>(null);
+  useEffect(() => { latestAudio.current = selectedAudio; }, [selectedAudio]);
   const [selectedSubtitle,setSelectedSubtitle] = useState<number|null>(null);
   const [activeCaption,setActiveCaption] = useState('');
   const [externalAudioUrl,setExternalAudioUrl] = useState('');
@@ -178,7 +182,7 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
       setPlaybackReady(true);
       if(wantsPlayback.current)requestVideoPlayback();
     });
-    return()=>{current=false;audioPreparationToken.current++;subtitlePreparationToken.current++;qualityPreparationToken.current++;};
+    return()=>{current=false;audioPreparationToken.current++;subtitlePreparationToken.current++;qualityPreparationToken.current++;audioPreparationAbort.current?.abort();qualityPreparationAbort.current?.abort();};
   },[autoPlay,item.id]);
 
   useEffect(()=>{setActiveCaption('');},[item.id,selectedSubtitle]);
@@ -363,18 +367,21 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
     if(!file||!info)return;
     if(!initial&&selectedAudio===stream)return;
     const token=++audioPreparationToken.current;
+    audioPreparationAbort.current?.abort();
+    const controller = new AbortController(); audioPreparationAbort.current = controller;
     const video=videoRef.current;
     const shouldResume=wantsPlayback.current;
     const position=resumeAt??(video?.currentTime||0);
     setSelectedAudio(stream);
     const track=info.audioTracks.find((candidate)=>candidate.index===stream);
-    const canUseOriginal=stream===info.defaultAudioStream&&track?.supported&&['aac','flac','mp3','opus','vorbis'].includes(track.codec);
+    const canUseOriginal=!qualityUrl&&stream===info.defaultAudioStream&&track?.supported&&['aac','flac','mp3','opus','vorbis'].includes(track.codec);
     if(canUseOriginal){
       const audio=audioRef.current;
       audio?.pause();
       audio?.removeAttribute('src');
       audio?.load();
       pendingAudio.current=null;
+      sourceTransition.current=false;
       setExternalAudioUrl('');
       setPreparing(null);
       setPlaybackReady(true);
@@ -389,19 +396,27 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
     setPlaybackReady(false);
     setPreparing('audio');setPreparationProgress(0);setPlaybackError('');
     try{
-      const url=await prepareBrowserAudio(file,stream,(progress)=>{if(token===audioPreparationToken.current)setPreparationProgress(progress);});
+      const url=await prepareBrowserAudio(file,stream,(progress)=>{if(token===audioPreparationToken.current)setPreparationProgress(progress);}, {
+        position, duration: item.duration || video?.duration || duration, signal: controller.signal, getElement: () => audioRef.current,
+        onSeek: target => { if(token===audioPreparationToken.current) void prepareAudio(stream,file,info,true,target); },
+        onError: error => { if(token===audioPreparationToken.current){pendingAudio.current=null;setPreparing(null);setPlaybackReady(false);setPlaybackError(error.message);} }
+      });
       if(token!==audioPreparationToken.current)return;
       setExternalAudioUrl(url);
-    }catch(reason){if(token===audioPreparationToken.current){pendingAudio.current=null;setPlaybackReady(true);setPlaybackError(reason instanceof Error?reason.message:'The selected audio track could not be prepared.');}}
-    finally{if(token===audioPreparationToken.current)setPreparing(null);}
+      if(audioRef.current?.currentSrc===url)finishPreparedAudio(audioRef.current);
+    }catch(reason){if(token===audioPreparationToken.current){pendingAudio.current=null;setPlaybackReady(false);setPlaybackError(reason instanceof Error?reason.message:'The selected audio track could not be prepared.');}}
+    finally{if(token===audioPreparationToken.current&&!pendingAudio.current)setPreparing(null);}
   }
-  async function prepareQuality(height:number,audioStream=selectedAudio,file=mediaFile,info=playbackInfo,initial=false){
-    if(!file||!info||(!initial&&!qualityBlocked.current&&selectedQuality===height&&audioStream===selectedAudio))return;
+  async function prepareQuality(height:number,audioStream=selectedAudio,file=mediaFile,info=playbackInfo,initial=false,seekAt?:number){
+    if(!file||!info||(!initial&&seekAt===undefined&&!qualityBlocked.current&&selectedQuality===height&&audioStream===selectedAudio))return;
     const originalHeight=info.qualityOptions[0]?.height;
     if(!originalHeight)return;
     const token=++qualityPreparationToken.current;
+    qualityPreparationAbort.current?.abort();
+    const controller = new AbortController(); qualityPreparationAbort.current = controller;
+    audioPreparationToken.current++; audioPreparationAbort.current?.abort(); pendingAudio.current = null;
     const video=videoRef.current;
-    const position=initial?(item.progress_position||0):(video?.currentTime||0);
+    const position=seekAt??(initial?(item.progress_position||0):(video?.currentTime||0));
     const shouldPlay=wantsPlayback.current;
     sourceTransition.current=true;
     qualityBlocked.current=true;
@@ -418,7 +433,11 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
         setQualityUrl('');
         if(video&&video.currentSrc===source.url)handleLoadedMetadata(video);
       }else{
-        const url=await prepareBrowserQuality(file,height,audioStream,(progress)=>{if(token===qualityPreparationToken.current)setPreparationProgress(progress);});
+        const url=await prepareBrowserQuality(file,height,audioStream,(progress)=>{if(token===qualityPreparationToken.current)setPreparationProgress(progress);}, {
+          position, duration: item.duration || video?.duration || duration, signal: controller.signal, getElement: () => videoRef.current,
+          onSeek: target => { if(token===qualityPreparationToken.current) void prepareQuality(height,latestAudio.current,file,info,false,target); },
+          onError: error => { if(token===qualityPreparationToken.current){pendingQuality.current=null;qualityBlocked.current=true;sourceTransition.current=true;videoRef.current?.pause();audioRef.current?.pause();setPreparing(null);setPlaybackReady(false);setPlaybackError(error.message);} }
+        });
         if(token!==qualityPreparationToken.current)return;
         pendingQuality.current!.url=url;
         setExternalAudioUrl('');
@@ -430,7 +449,7 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
         pendingQuality.current=null;setPlaybackReady(false);
         setPlaybackError((reason instanceof Error?reason.message:'The selected quality could not be prepared.')+' Choose another quality to continue; your quality limit has been kept.');
       }
-    }finally{if(token===qualityPreparationToken.current)setPreparing(null);}
+    }finally{if(token===qualityPreparationToken.current&&!pendingQuality.current)setPreparing(null);}
   }
   function selectQuality(preference:QualityPreference) {
     if(!playbackInfo)return;
@@ -446,6 +465,7 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
       if(!quality.url||video.currentSrc!==quality.url)return;
       video.currentTime=quality.position;
       pendingQuality.current=null;
+      setPreparing(null);
       sourceTransition.current=false;
       qualityBlocked.current=false;
       if(quality.restoreExternalAudio&&selectedAudio!==null){
@@ -465,8 +485,7 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
     if(!playbackInfo||!savePlaybackTrackSelection('audio',playbackInfo.audioTracks,stream))return;
     if(stream===selectedAudio)return;
     setSelectedAudio(stream);
-    const originalHeight=playbackInfo?.qualityOptions[0]?.height;
-    if(qualityBlocked.current||(selectedQuality!==null&&originalHeight!==undefined&&selectedQuality!==originalHeight)){
+    if(qualityBlocked.current){
       if(selectedQuality===null)return;
       void prepareQuality(selectedQuality,stream);
       return;
@@ -481,6 +500,7 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
     video.currentTime=pending.position;
     audio.volume=volume;audio.muted=muted;audio.playbackRate=video.playbackRate;
     pendingAudio.current=null;
+    setPreparing(null);
     sourceTransition.current=false;
     setPlaybackReady(true);
     if(wantsPlayback.current){
@@ -568,7 +588,7 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
     <audio key={externalAudioUrl||'native-audio'} ref={audioRef} src={externalAudioUrl||undefined} preload="auto" onTimeUpdate={event=>reportBackgroundAudio(event.currentTarget)} onLoadedMetadata={(event)=>finishPreparedAudio(event.currentTarget)} onCanPlay={(event)=>finishPreparedAudio(event.currentTarget)}/>
     <DraggableCaption key={`${item.id}:${selectedSubtitle}`} text={activeCaption} controlsVisible={controlsVisible} containerRef={containerRef} onDraggingChange={(dragging)=>{if(dragging)revealControls();else window.setTimeout(scheduleControlsHide,0);}}/>
     {source.loading && <div className="player-status"><SpinnerGap className="spin"/><strong>Opening video…</strong><span>Reading the selected local file.</span></div>}
-    {preparing&&preparing!=='subtitles'&&playRequested&&!playing&&<div className="player-status"><SpinnerGap className="spin"/><strong>{preparing==='audio'?'Preparing audio…':preparing==='quality'?`Preparing ${selectedQuality&&selectedQuality>=2160?'4K':`${selectedQuality}p`}…`:'Preparing subtitles…'}</strong><span>{preparationProgress>0?`${Math.round(preparationProgress*100)}% · `:''}{preparing==='audio'?'Only audio is converted locally and cached for this session.':preparing==='quality'?'Creating a lower-resolution local version. It will be reused this session.':'Processing locally in your browser.'}</span></div>}
+    {preparing&&preparing!=='subtitles'&&playRequested&&!playing&&<div className="player-status"><SpinnerGap className="spin"/><strong>{preparing==='audio'?'Preparing audio…':preparing==='quality'?`Preparing ${selectedQuality&&selectedQuality>=2160?'4K':`${selectedQuality}p`}…`:'Preparing subtitles…'}</strong><span>{preparationProgress>0?`${Math.round(preparationProgress*100)}% · `:''}{preparing==='audio'?'Preparing the selected audio from your current position.':preparing==='quality'?'Preparing the next few seconds locally. Your original file stays unchanged.':'Processing locally in your browser.'}</span></div>}
     {preparing==='subtitles'&&<span className="sr-only" role="status">Preparing subtitles…</span>}
     {(source.error || playbackError) && <div className="player-status error"><strong>Playback unavailable</strong><span>{source.error || playbackError}</span></div>}
     {!shorts&&<div className="player-gradient"/>}
