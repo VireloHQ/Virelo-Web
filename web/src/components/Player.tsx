@@ -53,6 +53,7 @@ export function Player({item,queue,queueIndex,shuffled,onShuffle,onEnded,onNext,
   const controlsTimer = useRef<number | null>(null);
   const longPressTimer = useRef<number | null>(null);
   const longPressTriggered = useRef(false);
+  const touchRevealOnly = useRef(false);
   const audioPreparationToken = useRef(0);
   const subtitlePreparationToken = useRef(0);
   const qualityPreparationToken = useRef(0);
@@ -248,6 +249,7 @@ export function Player({item,queue,queueIndex,shuffled,onShuffle,onEnded,onNext,
     longPressTimer.current=null;
   }
   function startLongPress(event:React.PointerEvent<HTMLDivElement>){
+    touchRevealOnly.current=!shorts&&event.pointerType==='touch'&&!controlsVisible&&event.target===videoRef.current;
     revealControls();
     if(!shorts||event.pointerType!=='touch'||(event.target instanceof Element&&event.target.closest('input,button,[role="menu"],.player-caption')))return;
     clearLongPress();
@@ -355,7 +357,13 @@ export function Player({item,queue,queueIndex,shuffled,onShuffle,onEnded,onNext,
     if(next){audioRetryCount.current=0;requestVideoPlayback();}
     else {pausePlayback();}
   }
-  function handleVideoClick(){if(longPressTriggered.current){longPressTriggered.current=false;return;}if(!shorts&&usesTouchControls()&&!controlsVisible){revealControls();return;}toggle();revealControls();}
+  function handleVideoClick(){
+    if(longPressTriggered.current){longPressTriggered.current=false;return;}
+    const revealOnly=touchRevealOnly.current||(!shorts&&usesTouchControls()&&!controlsVisible);
+    touchRevealOnly.current=false;
+    if(revealOnly){revealControls();scheduleControlsHide();return;}
+    toggle();revealControls();
+  }
   function seek(value:number){
     const video=videoRef.current;if(!video)return;
     video.currentTime=value;
@@ -550,7 +558,7 @@ export function Player({item,queue,queueIndex,shuffled,onShuffle,onEnded,onNext,
   />;
   return <div className={`player${shorts?' short-player':''}${queue?.length?' has-queue':''}${controlsVisible?' controls-visible':''}`} ref={containerRef} tabIndex={0} aria-label={item.title+' player'}
     onContextMenu={event=>{event.preventDefault();event.stopPropagation();revealControls();setContextPosition({x:event.clientX,y:event.clientY});}}
-    onDoubleClick={()=>void fullscreen()} onPointerMove={(event)=>{clearLongPress();if(event.pointerType==='mouse'){revealControls();scheduleControlsHide();}}} onPointerDown={startLongPress} onPointerUp={()=>{clearLongPress();scheduleControlsHide();}} onPointerCancel={()=>{clearLongPress();scheduleControlsHide();}} onPointerLeave={()=>scheduleControlsHide(300)} onFocusCapture={revealControls} onBlurCapture={()=>scheduleControlsHide(300)}
+    onDoubleClick={()=>void fullscreen()} onPointerMove={(event)=>{clearLongPress();if(event.pointerType==='mouse'){revealControls();scheduleControlsHide();}}} onPointerDown={startLongPress} onPointerUp={()=>{clearLongPress();scheduleControlsHide();}} onPointerCancel={()=>{touchRevealOnly.current=false;clearLongPress();scheduleControlsHide();}} onPointerLeave={()=>scheduleControlsHide(300)} onFocusCapture={revealControls} onBlurCapture={()=>scheduleControlsHide(300)}
     onKeyDown={event=>{revealControls();scheduleControlsHide();if(shorts&&(event.target===event.currentTarget||event.target===videoRef.current)&&[' ','k','Enter'].includes(event.key)){event.preventDefault();event.stopPropagation();toggle();return;}if(event.target===event.currentTarget&&(event.key==='ContextMenu'||(event.shiftKey&&event.key==='F10'))){event.preventDefault();const bounds=event.currentTarget.getBoundingClientRect();setContextPosition({x:bounds.left+24,y:bounds.top+24,keyboard:true});}}}>
     <video
       className={shorts?'video-presentation short-video':'video-presentation'}
