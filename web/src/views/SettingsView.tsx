@@ -2,7 +2,7 @@ import { PageSkeleton } from '../components/PageSkeleton';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Switch } from '@heroui/react';
-import { ArrowLeft, ArrowsClockwise, CheckCircle, FolderPlus, HardDrives, ShieldCheck, Trash, WarningCircle } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowsClockwise, CheckCircle, DeviceMobile, FolderPlus, Folders, HardDrives, ImageSquare, PlayCircle, ShieldCheck, Trash, WarningCircle } from '@phosphor-icons/react';
 import { api } from '../api';
 import { ScanProgress } from '../components/ScanProgress';
 import { Select } from '../components/Select';
@@ -12,11 +12,11 @@ import { QueueLayoutSetting } from '../components/QueueLayoutSetting';
 import type { QueueBehavior, Settings } from '../types';
 
 const settingsSections = [
-  { id:'libraries', label:'Libraries', description:'Folders and browser access' },
-  { id:'metadata', label:'Metadata', description:'Titles and artwork' },
-  { id:'playback', label:'Playback', description:'What plays next' },
-  { id:'shorts', label:'Shorts', description:'Videos in your vertical feed' },
-  { id:'privacy', label:'Privacy', description:'Your files stay on your device' }
+  { id:'libraries', label:'Libraries', description:'Folders and browser access', icon:Folders },
+  { id:'metadata', label:'Metadata', description:'Titles and artwork', icon:ImageSquare },
+  { id:'playback', label:'Playback', description:'What plays next', icon:PlayCircle },
+  { id:'shorts', label:'Shorts', description:'Videos in your vertical feed', icon:DeviceMobile },
+  { id:'privacy', label:'Privacy', description:'Your files stay on your device', icon:ShieldCheck }
 ] as const;
 
 const QUEUE_OPTIONS = [
