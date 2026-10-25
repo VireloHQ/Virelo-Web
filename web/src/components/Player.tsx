@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowsOut, Gear, FastForward, Pause, PictureInPicture, Play, Repeat, Rewind, SkipBack, SkipForward, SpeakerHigh, SpeakerSlash, SpinnerGap } from '@phosphor-icons/react';
+import { ArrowsOut, Gear, FastForward, Pause, PictureInPicture, Play, Repeat, Rewind, SpeakerHigh, SpeakerSlash, SpinnerGap } from '@phosphor-icons/react';
 import { api } from '../api';
 import { prepareBrowserAudio, prepareBrowserQuality, prepareBrowserSubtitle, probeBrowserPlayback } from '../browser-transcode';
 import { useLocalMediaUrl } from '../hooks/useLocalMediaUrl';
@@ -15,6 +15,8 @@ import { PlayerActionMenu } from './PlayerActionMenu';
 import { type RepeatMode } from '../utils/playback-repeat';
 import { useBackgroundPlayback } from '../hooks/useBackgroundPlayback';
 import { usePlaybackVolume } from '../hooks/usePlaybackVolume';
+import { usePlaybackSpeed } from '../hooks/usePlaybackSpeed';
+import { PlayerControls } from './PlayerControls';
 import { useVideoPresentation } from '../hooks/useVideoPresentation';
 import { VideoSettingsPanel } from './VideoSettingsPanel';
 import type { MediaItem, PlaybackInfo } from '../types';
@@ -25,6 +27,8 @@ interface PlayerProps {
   item: MediaItem;
   queue?: MediaItem[];
   queueIndex?: number;
+  shuffled?: boolean;
+  onShuffle?: () => void;
   onEnded?: () => void;
   onNext?: () => void;
   onPrev?: () => void;
@@ -36,7 +40,7 @@ interface PlayerProps {
   onRepeatChange?: (mode:RepeatMode) => void;
 }
 
-export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=true,canGoPrev=true,autoPlay,shorts,repeatMode,onRepeatChange}:PlayerProps) {
+export function Player({item,queue,queueIndex,shuffled,onShuffle,onEnded,onNext,onPrev,canGoNext=true,canGoPrev=true,autoPlay,shorts,repeatMode,onRepeatChange}:PlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const sourceTransition = useRef(false);
   const wantsPlayback = useRef(Boolean(autoPlay));
@@ -81,6 +85,7 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
   const [current,setCurrent] = useState(0);
   const [duration,setDuration] = useState(item.duration || 0);
   const {volume,setVolume,muted,setMuted} = usePlaybackVolume();
+  const {speed,changeSpeed} = usePlaybackSpeed(videoRef,audioRef,item.id,externalAudioUrl);
   const [pip,setPip] = useState(false);
   const [pipSupported,setPipSupported] = useState(false);
   const [singleRepeat,setSingleRepeat] = useState<RepeatMode>('off');
@@ -258,17 +263,17 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
     if(controlsTimer.current!==null){window.clearTimeout(controlsTimer.current);controlsTimer.current=null;}
     setControlsVisible(true);
   }
-  function scheduleControlsHide(){
+  function scheduleControlsHide(delay=2400){
     if(shorts)return;
     if(controlsTimer.current!==null)window.clearTimeout(controlsTimer.current);
     const video=videoRef.current;
     if(!video||video.paused){controlsTimer.current=null;return;}
     controlsTimer.current=window.setTimeout(()=>{
       const keyboardFocus=containerRef.current?.querySelector(':focus-visible');
-      if(keyboardFocus||document.querySelector('.player-action-menu')||containerRef.current?.querySelector('.playback-settings button[aria-expanded="true"]')){scheduleControlsHide();return;}
+      if(keyboardFocus||document.querySelector('.player-action-menu')||containerRef.current?.querySelector('[aria-haspopup][aria-expanded="true"]')){scheduleControlsHide();return;}
       setControlsVisible(false);
       controlsTimer.current=null;
-    },2400);
+    },delay);
   }
 
   function syncExternalAudio(play=false,audio=audioRef.current){
@@ -538,14 +543,14 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
     unified={!shorts}
     pictureControls={!shorts&&<VideoSettingsPanel settings={presentation.settings} onChange={presentation.update} onReset={presentation.reset}/>}
     repeatMode={repeat} hasQueue={Boolean(queue?.length)} onRepeatChange={changeRepeat}
-    pip={pip} onPip={pipSupported?()=>void togglePip():undefined}
+    speed={speed} onSpeedChange={changeSpeed}
     onSelectAudio={selectAudio}
     onSelectSubtitle={selectSubtitle}
     onSelectQuality={selectQuality}
   />;
   return <div className={`player${shorts?' short-player':''}${queue?.length?' has-queue':''}${controlsVisible?' controls-visible':''}`} ref={containerRef} tabIndex={0} aria-label={item.title+' player'}
     onContextMenu={event=>{event.preventDefault();event.stopPropagation();revealControls();setContextPosition({x:event.clientX,y:event.clientY});}}
-    onDoubleClick={()=>void fullscreen()} onPointerMove={(event)=>{clearLongPress();if(event.pointerType==='mouse'){revealControls();scheduleControlsHide();}}} onPointerDown={startLongPress} onPointerUp={()=>{clearLongPress();scheduleControlsHide();}} onPointerCancel={()=>{clearLongPress();scheduleControlsHide();}} onPointerLeave={scheduleControlsHide} onFocusCapture={revealControls} onBlurCapture={scheduleControlsHide}
+    onDoubleClick={()=>void fullscreen()} onPointerMove={(event)=>{clearLongPress();if(event.pointerType==='mouse'){revealControls();scheduleControlsHide();}}} onPointerDown={startLongPress} onPointerUp={()=>{clearLongPress();scheduleControlsHide();}} onPointerCancel={()=>{clearLongPress();scheduleControlsHide();}} onPointerLeave={()=>scheduleControlsHide(300)} onFocusCapture={revealControls} onBlurCapture={()=>scheduleControlsHide(300)}
     onKeyDown={event=>{revealControls();scheduleControlsHide();if(shorts&&(event.target===event.currentTarget||event.target===videoRef.current)&&[' ','k','Enter'].includes(event.key)){event.preventDefault();event.stopPropagation();toggle();return;}if(event.target===event.currentTarget&&(event.key==='ContextMenu'||(event.shiftKey&&event.key==='F10'))){event.preventDefault();const bounds=event.currentTarget.getBoundingClientRect();setContextPosition({x:bounds.left+24,y:bounds.top+24,keyboard:true});}}}>
     <video
       className={shorts?'video-presentation short-video':'video-presentation'}
@@ -591,31 +596,18 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
     {preparing&&preparing!=='subtitles'&&playRequested&&!playing&&<div className="player-status"><SpinnerGap className="spin"/><strong>{preparing==='audio'?'Preparing audio…':preparing==='quality'?`Preparing ${selectedQuality&&selectedQuality>=2160?'4K':`${selectedQuality}p`}…`:'Preparing subtitles…'}</strong><span>{preparationProgress>0?`${Math.round(preparationProgress*100)}% · `:''}{preparing==='audio'?'Preparing the selected audio from your current position.':preparing==='quality'?'Preparing the next few seconds locally. Your original file stays unchanged.':'Processing locally in your browser.'}</span></div>}
     {preparing==='subtitles'&&<span className="sr-only" role="status">Preparing subtitles…</span>}
     {(source.error || playbackError) && <div className="player-status error"><strong>Playback unavailable</strong><span>{source.error || playbackError}</span></div>}
-    {!shorts&&<div className="player-gradient"/>}
     {shorts?<ShortsPlayerControls item={item} current={current} duration={duration} muted={muted} pip={pip}
       pipSupported={pipSupported} onSeek={seek} onMute={toggleMute} onPip={()=>void togglePip()} onNext={shorts.onNext}>
       {playbackSettings}
-    </ShortsPlayerControls>:<div className="player-controls" onDoubleClick={event=>event.stopPropagation()}>
-      <input className="player-seek" style={{'--range-fill':`${Math.min(100, duration > 0 ? current/duration*100 : 0)}%`} as React.CSSProperties} aria-label="Seek" type="range" min="0" max={Math.max(duration,1)} step="0.1" value={Math.min(current,Math.max(duration,1))} onChange={(e)=>seek(Number(e.target.value))}/>
-      <div className="player-toolbar">
-        <div className="player-transport">
-        {onPrev && <button className="queue-previous" onClick={onPrev} aria-label="Previous video" disabled={!canGoPrev}><SkipBack weight="fill"/></button>}
-        <button className="skip-button" onClick={()=>seekBy(-10)} aria-label="Rewind 10 seconds"><Rewind weight="bold"/></button>
-        <button onClick={toggle} aria-label={pauseAction?'Pause':'Play'} aria-busy={preparing==='audio'}>{pauseAction?<Pause weight="fill"/>:<Play weight="fill"/>}</button>
-        <button className="skip-button" onClick={()=>seekBy(10)} aria-label="Fast-forward 10 seconds"><FastForward weight="bold"/></button>
-        {onNext && <button className="queue-next" onClick={onNext} aria-label="Next video" disabled={!canGoNext}><SkipForward weight="fill"/></button>}
-        <button onClick={toggleMute} aria-label={muted?'Unmute':'Mute'}>{muted?<SpeakerSlash weight="fill"/>:<SpeakerHigh weight="fill"/>}</button>
-        <input className="volume-slider" style={{'--range-fill':`${muted ? 0 : volume*100}%`} as React.CSSProperties} aria-label="Volume" type="range" min="0" max="1" step="0.05" value={muted?0:volume} onChange={(e)=>setVol(Number(e.target.value))}/>
-        <span className="player-time">{time(current)} / {time(duration)}</span>
-        {queue && queueIndex!==undefined && <span className="player-queue">{queueIndex+1} / {queue.length}</span>}
-        </div>
-        <div className="player-tools">
-        <FavoriteButton item={item} iconOnly />
-        {playbackSettings}
-        <button onClick={()=>void fullscreen()} aria-label="Fullscreen"><ArrowsOut/></button>
-        </div>
-      </div>
-    </div>}
+    </ShortsPlayerControls>:<PlayerControls title={item.title} current={current} duration={duration} paused={!pauseAction}
+      busy={preparing==='audio'||preparing==='quality'}
+      volume={volume} muted={muted} pip={pip} pipSupported={pipSupported}
+      canGoPrev={canGoPrev} canGoNext={canGoNext} hasQueue={Boolean(queue?.length)}
+      queuePosition={queue&&queueIndex!==undefined?`${queueIndex+1} / ${queue.length}`:undefined}
+      shuffled={shuffled} onShuffle={onShuffle} repeat={repeat} onRepeat={changeRepeat}
+      onToggle={toggle} onSeek={seek} onSeekBy={seekBy} onPrev={onPrev} onNext={onNext}
+      onVolume={setVol} onMute={toggleMute} onFullscreen={()=>void fullscreen()} onPip={()=>void togglePip()}
+      favorite={<FavoriteButton item={item} iconOnly/>} settings={playbackSettings}/>}
     {contextPosition&&shorts&&<ShortsContextMenu item={item} position={contextPosition} returnFocus={videoRef.current}
       onPlay={()=>{wantsPlayback.current=true;setPlayRequested(true);requestVideoPlayback();}}
       onDetails={shorts.onDetails} onClose={()=>setContextPosition(null)} />}
@@ -623,13 +615,12 @@ export function Player({item,queue,queueIndex,onEnded,onNext,onPrev,canGoNext=tr
       actions={[
         {label:pauseAction?'Pause':'Play',icon:pauseAction?<Pause/>:<Play/>,action:toggle},
         {label:'Rewind 10 seconds',icon:<Rewind/>,action:()=>seekBy(-10)},
-        {label:'Fast-forward 10 seconds',icon:<FastForward/>,action:()=>seekBy(10)},
+        {label:'Fast-forward 30 seconds',icon:<FastForward/>,action:()=>seekBy(30)},
         {label:muted?'Unmute':'Mute',icon:muted?<SpeakerSlash/>:<SpeakerHigh/>,action:toggleMute},
         {label:'Repeat video',icon:<Repeat/>,checked:repeat==='one',action:()=>changeRepeat(repeat==='one'?'off':'one')},
-        {label:'Settings',icon:<Gear/>,action:()=>containerRef.current?.querySelector<HTMLButtonElement>('[data-setting="settings"]')?.click()},
+        {label:'Settings',icon:<Gear/>,action:()=>containerRef.current?.querySelector<HTMLButtonElement>('[data-setting="settings"]')?.dispatchEvent(new MouseEvent('click',{bubbles:true,detail:contextPosition.keyboard?0:1}))},
         ...(pipSupported?[{label:pip?'Exit Picture in Picture':'Picture in Picture',icon:<PictureInPicture/>,action:()=>void togglePip()}]:[]),
         {label:'Fullscreen',icon:<ArrowsOut/>,action:()=>void fullscreen()}
       ]}/>}
   </div>;
 }
-function time(value:number){if(!Number.isFinite(value))return '0:00';const h=Math.floor(value/3600);const m=Math.floor(value%3600/60);const s=Math.floor(value%60);return h?`${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`:`${m}:${String(s).padStart(2,'0')}`;}

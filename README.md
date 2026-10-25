@@ -15,7 +15,7 @@ Video files are read through browser file APIs. They are not copied to Virelo, u
 - Folder selection with the File System Access API and a compatible folder-input fallback.
 - Local indexing, thumbnails, favorites, settings, and progress stored in IndexedDB.
 - Named playlists stored in the same browser, with ordered playback, shuffle, queue saving, drag/keyboard sorting and confirmed deletion. Removing a playlist never changes source files, favorites or watch history.
-- Direct playback from temporary `blob:` URLs.
+- Direct playback from temporary `blob:` URLs, with pitch-preserving 0.25–2× speed and synchronized converted audio.
 - Video settings: fit or crop to fill, rotate in 90° steps, and adjust brightness, contrast and saturation without modifying files or changing quality. Adjustments reset for each video and do not apply to native Picture in Picture.
 - Selectable embedded audio and text subtitle tracks for Matroska videos.
 - Audio and subtitle preferences, including subtitle Off, retained across videos and reloads. Compatible track configurations restore the choice; changed, ambiguous or unsupported tracks use the video's defaults without overwriting preferences.
