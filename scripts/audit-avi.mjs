@@ -37,12 +37,19 @@ try{
  const origin=new URL(base).origin;
  for(const width of [1440,390]){
   const context=await browser.newContext({viewport:{width,height:900},isMobile:width<600,hasTouch:width<600,serviceWorkers:'block',reducedMotion:'reduce'});
-  const page=lastPage=await context.newPage(),errors=[],external=[],codecRequests=[],workerPolicies=[];page.setDefaultTimeout(60000);
+  const page=lastPage=await context.newPage(),errors=[],external=new Map(),blockedScripts=[],codecRequests=[],workerPolicies=[];page.setDefaultTimeout(60000);
   context.on('response',response=>{if(/\/assets\/worker-[^/]+\.js$/.test(new URL(response.url()).pathname))workerPolicies.push(response.headers()['content-security-policy']);});
   page.on('pageerror',error=>errors.push(error.message));
-  page.on('requestfailed',request=>{if(request.failure()?.errorText!=='net::ERR_ABORTED')console.log('REQUEST_FAILED',request.url(),request.failure()?.errorText);});
+  page.on('requestfailed',request=>{
+    const failure=request.failure()?.errorText;
+    // CSP-rejected scripts never leave the browser; other failed network requests still count.
+    if((failure==='csp'||failure?.includes('ERR_BLOCKED_BY_CSP'))&&request.resourceType()==='script'&&request.method()==='GET'){
+      external.delete(request);blockedScripts.push(request.url());return;
+    }
+    if(failure!=='net::ERR_ABORTED')console.log('REQUEST_FAILED',request.url(),failure);
+  });
   page.on('console',message=>{if(message.type()==='error')console.log('BROWSER_ERROR',message.text());});
-  page.on('request',request=>{const url=new URL(request.url());if(['http:','https:'].includes(url.protocol)&&url.origin!==origin)external.push(url.href);if(url.pathname.includes('/ffmpeg-0.12.10/'))codecRequests.push(url.pathname);});
+  page.on('request',request=>{const url=new URL(request.url());if(['http:','https:'].includes(url.protocol)&&url.origin!==origin)external.set(request,url.href);if(url.pathname.includes('/ffmpeg-0.12.10/'))codecRequests.push(url.pathname);});
   if(width<600&&!process.env.VIRELO_TEST_AVI_BASE_URL)await page.route('**/ffmpeg-core.wasm.gz',async route=>route.fulfill({body:await readFile(join(repo,'dist/assets/ffmpeg-0.12.10/ffmpeg-core.wasm.gz')),contentType:'application/gzip'}));
   if(!process.env.VIRELO_TEST_AVI_BASE_URL)await context.route(url=>url.origin===origin,async route=>{const response=await route.fetch();await route.fulfill({response,headers:{...response.headers(),'content-security-policy':csp,'cross-origin-opener-policy':'same-origin'}});});
   await page.route('**/__avi-fixture/*',route=>{const item=fixtures.find(item=>String(item.id)===new URL(route.request().url()).pathname.split('/').at(-1));return route.fulfill({body:item.bytes,contentType:item.name.endsWith('.mp4')?'video/mp4':'video/x-msvideo'});});
@@ -108,7 +115,8 @@ try{
   await page.goto(base+'/app/watch/2');await ready();check(true,width+' another AVI still plays after a decoding error');
   const originals=await page.evaluate(async items=>{const root=await navigator.storage.getDirectory();return Promise.all(items.map(async item=>{const file=await(await root.getFileHandle(item.name)).getFile();return [...new Uint8Array(await crypto.subtle.digest('SHA-256',await file.arrayBuffer()))].map(byte=>byte.toString(16).padStart(2,'0')).join('');}));},fixtures.slice(0,6).map(item=>({name:item.name})));
   check(originals.every((hash,i)=>hash===fixtures[i].hash),width+' source video bytes are unchanged');
-  check(external.length===0,width+' decoding makes no requests to third parties: '+external.join(', '));
+  check(external.size===0,width+' decoding makes no network transfers to third parties: '+[...external.values()].join(', '));
+  if(blockedScripts.length)console.log('INFO',width,'CSP blocked '+blockedScripts.length+' injected script loads before network transfer');
   check(workerPolicies.length>0&&workerPolicies.every(policy=>policy?.includes("'wasm-unsafe-eval'")&&!policy.includes("'unsafe-eval'")),width+' decoder workers run under the production CSP without JavaScript eval');
   check(errors.length===0,width+' no browser exceptions: '+errors.join(', '));
   await page.screenshot({path:join(root,'avi-'+width+'.png')});await context.close();
