@@ -115,6 +115,7 @@ export interface PlaybackQuality {
 }
 
 export interface PlaybackInfo {
+  duration?: number;
   videoCodec: string | null;
   width: number | null;
   height: number | null;

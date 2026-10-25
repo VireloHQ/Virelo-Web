@@ -7,6 +7,7 @@ function responseKind(request, url) {
     if (/\.css$/i.test(url.pathname)) return 'style';
     if (/\.(?:woff2?|ttf|otf)$/i.test(url.pathname)) return 'font';
     if (/\.wasm$/i.test(url.pathname)) return 'wasm';
+    if (/\.wasm\.gz$/i.test(url.pathname)) return 'compressed-wasm';
     if (/\.(?:png|jpe?g|webp|avif|gif|svg|ico)$/i.test(url.pathname)) return 'image';
     return null;
   }
@@ -25,6 +26,7 @@ function validResponse(response, kind) {
     case 'style': return mime === 'text/css';
     case 'font': return mime.startsWith('font/') || ['application/font-woff', 'application/octet-stream'].includes(mime);
     case 'wasm': return mime === 'application/wasm';
+    case 'compressed-wasm': return ['application/gzip', 'application/x-gzip', 'application/octet-stream', 'application/wasm'].includes(mime);
     case 'image': return mime.startsWith('image/');
     case 'manifest': return ['application/manifest+json', 'application/json'].includes(mime);
     case 'document': return mime === 'text/html';

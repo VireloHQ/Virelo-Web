@@ -1,10 +1,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { ffmpegAssets } from './scripts/ffmpeg-assets.ts';
 
 export default defineConfig({
   root: 'web',
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), ffmpegAssets()],
+  optimizeDeps: { exclude: ['@ffmpeg/ffmpeg'] },
   build: {
     outDir: '../dist',
     emptyOutDir: true,

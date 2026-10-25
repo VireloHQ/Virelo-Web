@@ -303,6 +303,19 @@ if (isWeb) test('web installation validates MIME of each precached shell asset',
   assert.deepEqual([...sw.storage.get(cacheName).keys()].sort(), [origin + '/', origin + '/app'].sort());
 });
 
+if(isWeb)test('AVI decoder assets accept gzip or transparently decoded WASM and reject app-shell HTML',async()=>{
+  const path='/assets/ffmpeg-0.12.10/ffmpeg-core.wasm.gz';
+  for(const mime of ['application/gzip','application/x-gzip','application/octet-stream','application/wasm']){
+    const sw=worker({network:async()=>response('decoder bytes',mime)}),event=sw.fetch(path);
+    assert.equal(await(await event.response).text(),'decoder bytes');await event.done;
+    assert.deepEqual(sw.calls.put,[origin+path]);
+    const offline=worker({network:async()=>{throw Error('offline');}});offline.seed(path,response('decoder bytes',mime));
+    const cached=offline.fetch(path);assert.equal(await(await cached.response).text(),'decoder bytes');await cached.done;
+  }
+  const invalid=worker({network:async()=>response('<html>App shell</html>','text/html')}),event=invalid.fetch(path);
+  assert.equal((await event.response).type,'error');await event.done;assert.equal(invalid.calls.put.length,0);
+});
+
 test('Vercel SPA rewrite excludes the assets namespace and keeps HTML and sw.js fresh', async () => {
   const config = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'));
   const rewrites = config.rewrites.filter((rewrite) => rewrite.destination === '/index.html');

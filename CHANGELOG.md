@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Play AVI videos locally in the browser using a lazily loaded, self-hosted FFmpeg WebAssembly decoder. Generate read-only-input thumbnails and bounded playback segments, keep original resolution by default, and support seeking, audio selection, quality changes and resume without uploading or modifying source files. Document browser limits and include decoder licenses and source links.
+
 - Keep the first touch on a hidden normal-player overlay reveal-only, without pausing playback, and restart its idle timer. Clear the pending touch intent when a gesture is cancelled.
 
 - Replace the stacked mobile player panel with centered playback controls, top-edge tools and a 44px bottom seek strip over a light edge gradient. Keep title details below the inline video, retain the fullscreen title, fit landscape playback above navigation, and leave repeat in Settings and shuffle in the Queue or fullscreen without duplicating them over the inline picture.

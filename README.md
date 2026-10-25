@@ -20,6 +20,7 @@ Video files are read through browser file APIs. They are not copied to Virelo, u
 - Selectable embedded audio and text subtitle tracks for Matroska videos.
 - Audio and subtitle preferences, including subtitle Off, retained across videos and reloads. Compatible track configurations restore the choice; changed, ambiguous or unsupported tracks use the video's defaults without overwriting preferences.
 - Local AC-3/E-AC-3 to AAC audio conversion when the browser cannot decode the selected track.
+- Local AVI playback and thumbnails, including Xvid/DivX, with on-demand AVC/AAC conversion, selectable audio, quality changes and seeking. Original video files are never rewritten.
 - Responsive Home, Library, Favorites, Details, Player, and Shorts views.
 - Installable PWA shell.
 - No accounts, analytics, advertising, metadata providers, or file uploads.
@@ -31,6 +32,18 @@ The public landing page and setup guide support English, Japanese, Korean and Si
 Folder access requires a secure context, so production must use HTTPS. Browsers that can persist directory handles can reconnect the same folder after permission is granted. The fallback keeps selected files available for the current session and may ask for the folder again after a reload.
 
 Playback support still depends on the video formats and codecs supported by the browser. For Matroska files, Virelo Web can convert selected AC-3/E-AC-3 audio to AAC and extract SRT/SSA/ASS subtitles entirely on the device. Where browser encoders are available, lower video qualities are prepared incrementally from the current position. No media is uploaded and original files stay unchanged.
+
+AVI playback loads a self-hosted FFmpeg WebAssembly decoder only when needed
+(approximately 10 MB compressed on first use). Input files are mounted read-only;
+only four-second playback segments are generated, and paused playback does not
+convert the rest of the file. Seeking starts a new window at the requested time.
+"Original" retains the source resolution but requires AVC/AAC conversion for
+browser compatibility. Browsers must support MediaSource with AVC/AAC. AVI files
+must be smaller than 2 GB; unusually high resolutions, damaged files and unsupported
+codecs can still fail. Embedded AVI subtitles are not currently extracted. On
+slower devices or for larger AVI files, use the [local Virelo server](https://github.com/VireloHQ/Virelo).
+Native MP4/WebM playback does not load this decoder. See the
+[FFmpeg notice and corresponding-source links](LICENSES/FFmpeg-NOTICE.txt).
 
 Open **Playlists** from Library or desktop navigation. Add videos from their
 details or save a playback queue, then use **Save changes** to keep order/name
@@ -55,6 +68,10 @@ Run the complete local check with:
 ```bash
 npm run check
 ```
+
+With FFmpeg and Playwright available, run `npm run build` followed by
+`node scripts/audit-avi.mjs` to verify AVI playback, thumbnails, audio selection,
+seeking and source-file integrity against the built app.
 
 ## Build and deploy
 

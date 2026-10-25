@@ -1,4 +1,6 @@
-export const THUMBNAIL_VERSION = 2;
+import { isAviFile } from './avi.ts';
+
+export const THUMBNAIL_VERSION = 3;
 
 export interface VideoProbe {
   duration: number | null;
@@ -125,6 +127,10 @@ async function probeNative(file: File): Promise<VideoProbe> {
 }
 
 export async function probeVideo(file: File): Promise<VideoProbe> {
+  if (await isAviFile(file)) {
+    try { return await (await import('../avi-playback')).probeAviThumbnail(file); }
+    catch { return { duration: null, width: null, height: null, thumbnail: null }; }
+  }
   let decoded: VideoProbe | undefined;
   try { decoded = await probeDecoded(file); if (decoded.thumbnail) return decoded; } catch { /* Native decoding is the fallback. */ }
   try { const native = await probeNative(file); return native.thumbnail ? native : decoded ?? native; }

@@ -15,6 +15,8 @@ import { registerAacEncoder } from '@mediabunny/aac-encoder';
 import matroskaSubtitlesUrl from 'matroska-subtitles/dist/matroska-subtitles.min.js?url';
 import type { PlaybackInfo, PlaybackTrack } from './types';
 import { streamBrowserConversion, type BrowserStreamOptions } from './browser-stream';
+import { isAviFile } from './utils/avi';
+import { playbackQualities, qualityBitrate } from './utils/playback-quality';
 
 const DIRECT_AUDIO_CODECS=new Set(['aac','flac','mp3','opus','vorbis']);
 const MATROSKA_EXTENSIONS=new Set(['mkv','mka','mks','webm']);
@@ -36,6 +38,7 @@ export function probeBrowserPlayback(file:File){
 }
 
 async function probe(file:File):Promise<PlaybackInfo>{
+  if (await isAviFile(file)) return (await import('./avi-playback')).probeAvi(file);
   const input=createInput(file);
   try{
     const [allTracks,videoTracks,audioTracks,primaryAudio,subtitleTracks]=await Promise.all([
@@ -126,6 +129,10 @@ async function configureConversion(file: File, output: Output, stream: number | 
 export async function prepareBrowserQuality(file: File, height: number, audioStream: number | null,
   onProgress?: (progress: number) => void, options?: BrowserStreamOptions) {
   if (options?.signal.aborted) throw new DOMException('Playback preparation cancelled.', 'AbortError');
+  if (await isAviFile(file)) {
+    if (!options) throw new Error('AVI playback requires incremental browser streaming.');
+    return (await import('./avi-playback')).streamAvi(file, height, audioStream, options);
+  }
   const key = `${file.name}:${file.size}:${file.lastModified}:quality:${height}:audio:${audioStream ?? 'none'}`;
   const cached = qualityCache.get(key); if (cached) return cached;
   if (!(await canEncodeVideo('avc'))) throw new Error('This browser cannot create a lower-resolution AVC version.');
@@ -286,22 +293,6 @@ function channelLabel(channels:number){
   if(channels===1)return 'mono';
   if(channels===2)return 'stereo';
   return `${channels} channels`;
-}
-function playbackQualities(sourceHeight:number|null,includeLowerQualities:boolean){
-  if(!sourceHeight||sourceHeight<1)return [];
-  return [sourceHeight,...(includeLowerQualities?[2160,1440,1080,720,480,360]:[])]
-    .filter((height,index,values)=>height<=sourceHeight&&values.indexOf(height)===index)
-    .sort((a,b)=>b-a)
-    .map((height)=>({height,label:qualityLabel(height),bitrate:qualityBitrate(height)}));
-}
-function qualityLabel(height:number){return height>=2160?'4K':`${height}p`;}
-function qualityBitrate(height:number){
-  if(height>=2160)return 12_000_000;
-  if(height>=1440)return 8_000_000;
-  if(height>=1080)return 5_000_000;
-  if(height>=720)return 2_800_000;
-  if(height>=480)return 1_400_000;
-  return 800_000;
 }
 
 interface MatroskaSubtitleTrack{number:number;language?:string;type:string;name?:string}

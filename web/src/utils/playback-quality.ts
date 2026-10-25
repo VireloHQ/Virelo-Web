@@ -37,6 +37,21 @@ export function resolvePreferredQuality(qualities: readonly {height: number}[], 
 
 export function qualityLabel(height: number) { return height >= 2160 ? '4K' : `${height}p`; }
 
+export function playbackQualities(sourceHeight: number | null, includeLowerQualities: boolean) {
+  if (!sourceHeight || sourceHeight < 1) return [];
+  return [sourceHeight, ...(includeLowerQualities ? [2160, 1440, 1080, 720, 480, 360] : [])]
+    .filter((height, index, values) => height <= sourceHeight && values.indexOf(height) === index)
+    .sort((a, b) => b - a).map(height => ({ height, label: qualityLabel(height), bitrate: qualityBitrate(height) }));
+}
+export function qualityBitrate(height: number) {
+  if (height >= 2160) return 12_000_000;
+  if (height >= 1440) return 8_000_000;
+  if (height >= 1080) return 5_000_000;
+  if (height >= 720) return 2_800_000;
+  if (height >= 480) return 1_400_000;
+  return 800_000;
+}
+
 // Portrait HLS streams advertise their long side as height. Virelo labels the short side.
 export function boundedQualityLevel(levels: readonly {width: number; height: number}[], ceiling: number): number {
   let selected = -1;
