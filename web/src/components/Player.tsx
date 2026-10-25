@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowsOut, Gear, FastForward, Pause, PictureInPicture, Play, Repeat, Rewind, SpeakerHigh, SpeakerSlash, SpinnerGap } from '@phosphor-icons/react';
+import { ArrowsOut, Gear, FastForward, Pause, PictureInPicture, Play, Repeat, Rewind, SpeakerHigh, SpeakerSlash } from '@phosphor-icons/react';
+import { LoadingSpinner } from './LoadingSpinner';
 import { api } from '../api';
 import { prepareBrowserAudio, prepareBrowserQuality, prepareBrowserSubtitle, probeBrowserPlayback } from '../browser-transcode';
 import { useLocalMediaUrl } from '../hooks/useLocalMediaUrl';
@@ -606,9 +607,9 @@ export function Player({item,queue,queueIndex,shuffled,onShuffle,onEnded,onNext,
     </video>
     <audio key={externalAudioUrl||'native-audio'} ref={audioRef} src={externalAudioUrl||undefined} preload="auto" onTimeUpdate={event=>reportBackgroundAudio(event.currentTarget)} onLoadedMetadata={(event)=>finishPreparedAudio(event.currentTarget)} onCanPlay={(event)=>finishPreparedAudio(event.currentTarget)}/>
     <DraggableCaption key={`${item.id}:${selectedSubtitle}`} text={activeCaption} controlsVisible={controlsVisible} containerRef={containerRef} onDraggingChange={(dragging)=>{if(dragging)revealControls();else window.setTimeout(scheduleControlsHide,0);}}/>
-    {source.loading && <div className="player-status"><SpinnerGap className="spin"/><strong>Opening video…</strong><span>Reading the selected local file.</span></div>}
-    {aviSource&&!playbackInfo&&!source.loading&&!source.error&&!playbackError&&<div className="player-status"><SpinnerGap className="spin"/><strong>Preparing AVI playback…</strong><span>Loading local playback support. No video files are uploaded or changed.</span></div>}
-    {preparing&&preparing!=='subtitles'&&playRequested&&!playing&&<div className="player-status"><SpinnerGap className="spin"/><strong>{preparing==='audio'?'Preparing audio…':preparing==='quality'?`Preparing ${selectedQuality&&selectedQuality>=2160?'4K':`${selectedQuality}p`}…`:'Preparing subtitles…'}</strong><span>{preparationProgress>0?`${Math.round(preparationProgress*100)}% · `:''}{preparing==='audio'?'Preparing the selected audio from your current position.':preparing==='quality'?'Preparing the next few seconds locally. Your original file stays unchanged.':'Processing locally in your browser.'}</span></div>}
+    {source.loading && <div className="player-status"><LoadingSpinner/><strong>Opening video…</strong><span>Reading the selected local file.</span></div>}
+    {aviSource&&!playbackInfo&&!source.loading&&!source.error&&!playbackError&&<div className="player-status"><LoadingSpinner/><strong>Preparing AVI playback…</strong><span>Loading local playback support. No video files are uploaded or changed.</span></div>}
+    {preparing&&preparing!=='subtitles'&&playRequested&&!playing&&<div className="player-status"><LoadingSpinner/><strong>{preparing==='audio'?'Preparing audio…':preparing==='quality'?`Preparing ${selectedQuality&&selectedQuality>=2160?'4K':`${selectedQuality}p`}…`:'Preparing subtitles…'}</strong><span>{preparationProgress>0?`${Math.round(preparationProgress*100)}% · `:''}{preparing==='audio'?'Preparing the selected audio from your current position.':preparing==='quality'?'Preparing the next few seconds locally. Your original file stays unchanged.':'Processing locally in your browser.'}</span></div>}
     {preparing==='subtitles'&&<span className="sr-only" role="status">Preparing subtitles…</span>}
     {(source.error || playbackError) && <div className="player-status error"><strong>Playback unavailable</strong><span>{source.error || playbackError}</span></div>}
     {shorts?<ShortsPlayerControls item={item} current={current} duration={duration} muted={muted} pip={pip}

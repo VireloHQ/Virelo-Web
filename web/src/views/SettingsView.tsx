@@ -107,10 +107,9 @@ export function SettingsView() {
           </div>
 
           <div className="scan-strip">
-            <div>{scan.data?.running ? <ArrowsClockwise className="spin"/> : <CheckCircle/>}<span><strong>{scan.data?.message || 'Ready'}</strong>{scan.data?.running && ` · ${scan.data.scanned} scanned`}</span></div>
-            <Button variant="secondary" isPending={scan.data?.running} isDisabled={!libraries.data?.length} onPress={()=>void startScan()}><ArrowsClockwise/> Scan now</Button>
+            {scan.data?.running ? <ScanProgress status={scan.data} compact/> : <div><CheckCircle/><span><strong>{scan.data?.message || 'Ready'}</strong></span></div>}
+            <Button variant="secondary" isDisabled={scan.data?.running || !libraries.data?.length} onPress={()=>void startScan()}><ArrowsClockwise/> Scan now</Button>
           </div>
-          <ScanProgress status={scan.data} compact/>
         </section>}
 
         {activeSection === 'metadata' && <section id="settings-panel-metadata" className="settings-card settings-section" aria-labelledby="settings-title-metadata">
