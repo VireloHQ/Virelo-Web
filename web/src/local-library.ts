@@ -2,7 +2,7 @@ import type { BrowserCapabilities, Library, MediaItem, ScanStatus, Settings } fr
 import { probeVideo, THUMBNAIL_VERSION, validThumbnail } from './utils/video-thumbnail';
 
 const DB_NAME = 'virelo-web';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const VIDEO_EXTENSIONS = new Set(['mp4', 'm4v', 'mkv', 'webm', 'mov', 'avi', 'wmv', 'mpg', 'mpeg', 'ts', 'm2ts', 'flv', 'ogv', '3gp']);
 
 type PermissionMode = { mode: 'read' };
@@ -52,7 +52,7 @@ function idleScanStatus(): ScanStatus {
   return { running: false, startedAt: null, finishedAt: null, total: 0, scanned: 0, added: 0, updated: 0, skipped: 0, errors: 0, message: 'Ready' };
 }
 
-function openDatabase() {
+export function openDatabase() {
   return new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onerror = () => reject(request.error ?? new Error('Could not open browser storage.'));
@@ -62,8 +62,9 @@ function openDatabase() {
       if (!db.objectStoreNames.contains('media')) db.createObjectStore('media', { keyPath: 'id' });
       if (!db.objectStoreNames.contains('thumbnails')) db.createObjectStore('thumbnails', { keyPath: 'id' });
       if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings');
+      if (!db.objectStoreNames.contains('playlists')) db.createObjectStore('playlists', { keyPath: 'id', autoIncrement: true });
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => { request.result.onversionchange = () => request.result.close(); resolve(request.result); };
   });
 }
 
@@ -439,6 +440,32 @@ export async function listStoredMedia() {
 
 export async function getStoredMedia(id: number) {
   return readStore<StoredMedia>('media', id);
+}
+
+export async function hydrateMediaIds(ids: number[]): Promise<MediaItem[]> {
+  const db = await openDatabase();
+  return new Promise<MediaItem[]>((resolve, reject) => {
+    const tx = db.transaction(['media', 'thumbnails'], 'readonly'), result: MediaItem[] = [];
+    ids.forEach((id, index) => {
+      const request = tx.objectStore('media').get(id);
+      request.onsuccess = () => {
+        const item = request.result as StoredMedia | undefined;
+        if (!item) return;
+        const assign = (thumbnail: string | null) => { result[index] = { ...item, thumbnail_path: thumbnail }; };
+        const cached = thumbnailUrls.get(id);
+        if (cached) { assign(cached); return; }
+        const thumbnail = tx.objectStore('thumbnails').get(id);
+        thumbnail.onsuccess = () => {
+          const blob = (thumbnail.result as StoredThumbnail | undefined)?.blob;
+          const url = thumbnailUrls.get(id) || (blob ? URL.createObjectURL(blob) : null);
+          if (url) thumbnailUrls.set(id, url);
+          assign(url);
+        };
+      };
+    });
+    tx.oncomplete = () => resolve(result.filter(Boolean));
+    tx.onabort = () => reject(tx.error ?? new Error('Could not read playlist videos.'));
+  }).finally(() => db.close());
 }
 
 export async function saveStoredMedia(item: StoredMedia) {

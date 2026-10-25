@@ -14,6 +14,7 @@ Video files are read through browser file APIs. They are not copied to Virelo, u
 
 - Folder selection with the File System Access API and a compatible folder-input fallback.
 - Local indexing, thumbnails, favorites, settings, and progress stored in IndexedDB.
+- Named playlists stored in the same browser, with ordered playback, shuffle, queue saving, drag/keyboard sorting and confirmed deletion. Removing a playlist never changes source files, favorites or watch history.
 - Direct playback from temporary `blob:` URLs.
 - Video settings: fit or crop to fill, rotate in 90° steps, and adjust brightness, contrast and saturation without modifying files or changing quality. Adjustments reset for each video and do not apply to native Picture in Picture.
 - Selectable embedded audio and text subtitle tracks for Matroska videos.
@@ -29,7 +30,13 @@ The public landing page and setup guide support English, Japanese, Korean and Si
 
 Folder access requires a secure context, so production must use HTTPS. Browsers that can persist directory handles can reconnect the same folder after permission is granted. The fallback keeps selected files available for the current session and may ask for the folder again after a reload.
 
-Playback support still depends on the video formats and codecs supported by the browser. For Matroska files, Virelo Web can convert selected AC-3/E-AC-3 audio to AAC and extract SRT/SSA/ASS subtitles entirely on the device. It does not upload media or transcode the video stream.
+Playback support still depends on the video formats and codecs supported by the browser. For Matroska files, Virelo Web can convert selected AC-3/E-AC-3 audio to AAC and extract SRT/SSA/ASS subtitles entirely on the device. Where browser encoders are available, lower video qualities are prepared incrementally from the current position. No media is uploaded and original files stay unchanged.
+
+Open **Playlists** from Library or desktop navigation. Add videos from their
+details or save a playback queue, then use **Save changes** to keep order/name
+edits. Browser playlists are not cloud-synced; clearing this site's browser data
+also removes them. Missing library references are retained and skipped during
+playback. Concurrent edits cannot silently overwrite each other.
 
 ## Development
 

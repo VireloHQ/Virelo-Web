@@ -20,6 +20,7 @@ import {
 } from './local-library';
 import type { FolderEntry, HomeData, MediaItem, Settings, ShortsFeed, SortKey } from './types';
 import { buildHome } from './utils/home-catalog';
+import { createLocalPlaylist, deleteLocalPlaylist, getLocalPlaylist, listLocalPlaylists, updateLocalPlaylist } from './local-playlists';
 
 async function hydrated(items: Awaited<ReturnType<typeof listStoredMedia>>) {
   return Promise.all(items.map(hydrateMedia));
@@ -35,6 +36,11 @@ function compare(sort: SortKey) {
 }
 
 export const api = {
+  playlists: listLocalPlaylists,
+  playlist: getLocalPlaylist,
+  createPlaylist: createLocalPlaylist,
+  updatePlaylist: updateLocalPlaylist,
+  deletePlaylist: deleteLocalPlaylist,
   home: async (): Promise<HomeData> => {
     const shelves = buildHome(await listStoredMedia());
     // Resolve thumbnails once per displayed title, not once per item in a large library.

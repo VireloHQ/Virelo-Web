@@ -5,6 +5,7 @@ import { Button } from '@heroui/react';
 import { ArrowLeft, Play } from '@phosphor-icons/react';
 import { api, artwork } from '../api';
 import { FavoriteButton } from '../components/FavoriteButton';
+import { SavePlaylist } from '../components/SavePlaylist';
 import { MediaRow } from '../components/MediaRow';
 
 export function DetailView() {
@@ -38,6 +39,7 @@ export function DetailView() {
           {item.genres && <div className="genre-line">{item.genres.split(',').map(g=><span key={g}>{g.trim()}</span>)}</div>}
           <div className="detail-actions"><Button size="lg" onPress={()=>void navigate({to:'/app/watch/$mediaId',params:{mediaId}})}><Play weight="fill"/> {canResume(item) ? `Resume ${formatTime(item.progress_position || 0)}` : 'Play'}</Button><FavoriteButton item={item} /></div>
           <dl className="tech-meta"><div><dt>File</dt><dd>{item.filename}</dd></div><div><dt>Container</dt><dd>{item.container?.toUpperCase() || 'Unknown'}</dd></div><div><dt>Size</dt><dd>{formatSize(item.size)}</dd></div></dl>
+          <div className="playlist-watch-actions"><SavePlaylist mediaIds={[item.id]}/></div>
         </div>
       </div>
       {related.data && <MediaRow title={item.series_title ? 'More episodes' : 'More in your library'} items={related.data.filter(x=>x.id!==item.id).slice(0,20)}/>}

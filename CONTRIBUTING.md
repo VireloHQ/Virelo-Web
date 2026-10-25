@@ -13,6 +13,13 @@ unit tests. CI checks the latest patches of Node 22, 24 and 26.
 
 ## Browser checks
 
+`node scripts/audit-playlists.mjs` verifies named-playlist creation, editing,
+reopening, queue saves during playback, conflict recovery and confirmed deletion
+on desktop and mobile using isolated storage and generated media. The Web checks
+also cover the version-1 database upgrade, concurrent writes and temporarily
+unavailable references. Set `VIRELO_TEST_PLAYLIST_SCENARIO` to `desktop`, `mobile`
+or `small` to run one size. The npm checkout also accepts `VIRELO_TEST_WEB_REPO`.
+
 `scripts/audit-*.mjs` cover landing pages, localization, thumbnails, favorites,
 playback controls, responsive layouts and recovery states. Use a separate
 Playwright installation and set `VIRELO_TEST_NODE_PACKAGE` to its `package.json`

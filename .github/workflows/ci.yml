@@ -38,4 +38,5 @@ jobs:
       - run: npm install --no-save --package-lock=false playwright@1.62.1
       - run: npx playwright install --with-deps chromium
       - run: node scripts/audit-queue.mjs
+      - run: node scripts/audit-playlists.mjs
       - run: node scripts/audit-browser-streaming.mjs

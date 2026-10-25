@@ -61,7 +61,7 @@ try {
   await page.evaluate(async items=>{
     const {saveStoredMedia}=await import('/src/local-library.ts');
     for(const item of items)await saveStoredMedia(item);
-    const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('virelo-web',1);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
+    const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('virelo-web');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
     const images=await Promise.all(items.map(async item=>({id:item.id,blob:await(await fetch(item.backdrop_path)).blob()})));
     await new Promise((resolve,reject)=>{const tx=db.transaction(['thumbnails','libraries'],'readwrite');for(const image of images)tx.objectStore('thumbnails').put(image);tx.objectStore('libraries').put({id:1,label:'My videos',path:'My videos',created_at:0,persistent:false});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
     db.close();

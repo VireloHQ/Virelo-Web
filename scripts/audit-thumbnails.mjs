@@ -42,7 +42,7 @@ try {
     window.showDirectoryPicker = async () => directory;
     await library.addLocalLibrary();
     const items = await library.listStoredMedia();
-    const db = await new Promise((resolve,reject)=>{const request=indexedDB.open('virelo-web',1);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
+    const db = await new Promise((resolve,reject)=>{const request=indexedDB.open('virelo-web');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
     window.__readThumbnail = id => new Promise((resolve,reject)=>{const request=db.transaction('thumbnails').objectStore('thumbnails').get(id);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
     window.__writeThumbnail = record => new Promise((resolve,reject)=>{const tx=db.transaction('thumbnails','readwrite');tx.objectStore('thumbnails').put(record);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
     window.__deleteThumbnail = id => new Promise((resolve,reject)=>{const tx=db.transaction('thumbnails','readwrite');tx.objectStore('thumbnails').delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});

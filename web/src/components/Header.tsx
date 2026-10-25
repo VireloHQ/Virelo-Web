@@ -42,6 +42,7 @@ export function Header() {
           <Link to="/app/library" activeProps={{className:'active'}}>Library</Link>
           <Link to="/app/shorts" search={{}} activeProps={{className:'active'}}>Shorts</Link>
           <Link to="/app/favorites" activeProps={{className:'active'}}>Favorites</Link>
+          <Link to="/app/playlists" activeProps={{className:'active'}}>Playlists</Link>
         </nav>
         <div className="topbar-actions">
           <div className={`header-search-shell ${searchOpen ? 'open' : ''}`}>

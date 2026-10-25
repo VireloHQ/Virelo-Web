@@ -10,6 +10,11 @@ The original video files remain in their existing folders. Playback uses tempora
 
 ## Network behavior
 
+Named playlists, their titles and video references are also stored in IndexedDB
+for this browser and site origin. They are not shared or synced to another device.
+Deleting a playlist does not affect source videos, favorites or watch history.
+Clearing site data removes saved playlists as well as the local index.
+
 Virelo Web loads its application files from the site that hosts it. It does not include analytics, advertising, account registration, external metadata providers, or automatic requests containing video titles and filenames.
 
 ## Removing access

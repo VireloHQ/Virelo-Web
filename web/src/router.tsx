@@ -10,6 +10,8 @@ const LandingRouteView = createRouteView(() => import('./views/LandingView'), 'L
 const SetupGuideRouteView = createRouteView(() => import('./views/SetupGuideView'), 'SetupGuideView', 'setup');
 const HomeRouteView = createRouteView(() => import('./views/HomeView'), 'HomeView', 'home');
 const FavoritesRouteView = createRouteView(() => import('./views/FavoritesView'), 'FavoritesView', 'library');
+const PlaylistsRouteView = createRouteView(() => import('./views/PlaylistsView'), 'PlaylistsView', 'library');
+const PlaylistRouteView = createRouteView(() => import('./views/PlaylistsView'), 'PlaylistView', 'library');
 const LibraryRouteView = createRouteView(() => import('./views/LibraryView'), 'LibraryView', 'library');
 const SettingsRouteView = createRouteView(() => import('./views/SettingsView'), 'SettingsView', 'settings');
 const WatchRouteView = createRouteView(() => import('./views/WatchView'), 'WatchView', 'watch');
@@ -22,6 +24,8 @@ function viewForPath(pathname: string) {
   const path = pathname.replace(/^\/app(?=\/|$)/, '').replace(/\/$/, '') || '/';
   if (path === '/') return HomeRouteView;
   if (path === '/favorites') return FavoritesRouteView;
+  if (path === '/playlists') return PlaylistsRouteView;
+  if (/^\/playlists\/[^/]+$/.test(path)) return PlaylistRouteView;
   if (path === '/library') return LibraryRouteView;
   if (path === '/settings') return SettingsRouteView;
   if (path === '/shorts') return ShortsRouteView;
@@ -32,6 +36,7 @@ function viewForPath(pathname: string) {
 export interface WatchRouteSearch {
   queue?: boolean;
   favorites?: boolean;
+  playlistId?: number;
   folder?: string;
   libraryId?: number;
   sort?: SortKey;
@@ -42,6 +47,7 @@ function validateWatchSearch(input: Record<string, unknown>): WatchRouteSearch {
   return {
     queue: input.queue === true || input.queue === '1' || input.queue === 'true',
     favorites: input.favorites === true || input.favorites === '1' || input.favorites === 'true',
+    playlistId: (typeof input.playlistId === 'number' || typeof input.playlistId === 'string' && /^\d+$/.test(input.playlistId)) && Number.isSafeInteger(Number(input.playlistId)) && Number(input.playlistId) > 0 ? Number(input.playlistId) : undefined,
     folder: typeof input.folder === 'string' && input.folder !== '' ? input.folder.slice(0, 500) : undefined,
     libraryId: typeof input.libraryId === 'string' && /^\d+$/.test(input.libraryId) ? Number(input.libraryId) : undefined,
     sort: (['title', 'newest', 'oldest', 'year', 'duration', 'random'] as string[]).includes(String(input.sort ?? '')) ? input.sort as SortKey : undefined,
@@ -64,6 +70,8 @@ const appRoute = createRoute({ getParentRoute:()=>rootRoute, path:'app', compone
 const appIndexRoute = createRoute({ getParentRoute:()=>appRoute, path:'/', component:HomeRouteView });
 const libraryRoute = createRoute({ getParentRoute:()=>appRoute, path:'library', component:LibraryRouteView });
 const favoritesRoute = createRoute({ getParentRoute:()=>appRoute, path:'favorites', component:FavoritesRouteView });
+const playlistsRoute = createRoute({ getParentRoute:()=>appRoute, path:'playlists', component:PlaylistsRouteView });
+const playlistRoute = createRoute({ getParentRoute:()=>appRoute, path:'playlists/$playlistId', component:PlaylistRouteView });
 const settingsRoute = createRoute({ getParentRoute:()=>appRoute, path:'settings', component:SettingsRouteView });
 const watchRoute = createRoute({ getParentRoute:()=>appRoute, path:'watch/$mediaId', component:WatchRouteView, validateSearch: validateWatchSearch });
 const detailRoute = createRoute({ getParentRoute:()=>appRoute, path:'title/$mediaId', component:DetailRouteView });
@@ -86,7 +94,7 @@ const legacyDetailRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   landingRoute,
   setupGuideRoute,
-  appRoute.addChildren([appIndexRoute, libraryRoute, favoritesRoute, settingsRoute, watchRoute, detailRoute, shortsRoute]),
+  appRoute.addChildren([appIndexRoute, libraryRoute, favoritesRoute, playlistsRoute, playlistRoute, settingsRoute, watchRoute, detailRoute, shortsRoute]),
   legacyLibraryRoute,
   legacyFavoritesRoute,
   legacySettingsRoute,
