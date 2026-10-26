@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Inset settings-navigation keyboard-focus outlines to the row so they align with the selected highlight without an extra outer border.
+
 - Tighten vertical Queue rows by removing stacked padding and reducing the row gap, preserving horizontal layout and action target sizes.
 
 - Curve context-menu bubble tails at both the tip and the join, sharing the same shape with nested side settings while preserving placement and behavior.
