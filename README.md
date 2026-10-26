@@ -27,6 +27,10 @@ Video files are read through browser file APIs. They are not copied to Virelo, u
 - Installable PWA shell.
 - No accounts, analytics, advertising, metadata providers, or file uploads.
 
+## Appearance
+
+Open **Settings → Appearance** to choose Virelo, Streamline, Theater or Centerstage controller layouts and an accent color. Custom colors are adjusted for readable controls. Appearance settings are stored in this browser; there are no accounts or server-side preferences. Controller layouts apply to normal videos; Shorts keep their vertical controls. No video files are changed.
+
 ## Browser behavior
 
 Live volume leveling is disabled on Safari/iOS WebKit to avoid native-HLS

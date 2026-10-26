@@ -1,3 +1,5 @@
+import type { Appearance } from './utils/appearance';
+import { readAppearance, writeAppearance } from './utils/appearance-storage';
 import {
   addLocalLibrary,
   browserCapabilities,
@@ -36,6 +38,8 @@ function compare(sort: SortKey) {
 }
 
 export const api = {
+  appearance: () => Promise.resolve(readAppearance()),
+  saveAppearance: (value: Appearance) => Promise.resolve().then(() => writeAppearance(value)),
   playlists: listLocalPlaylists,
   playlist: getLocalPlaylist,
   createPlaylist: createLocalPlaylist,

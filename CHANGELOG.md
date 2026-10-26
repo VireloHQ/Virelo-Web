@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add Appearance settings with four original controller layouts and preset/custom accent colors. Save preferences locally in this browser without adding accounts or uploading files. Preserve playback state, mobile controls and keyboard access.
+
 - Inset settings-navigation keyboard-focus outlines to the row so they align with the selected highlight without an extra outer border.
 
 - Tighten vertical Queue rows by removing stacked padding and reducing the row gap, preserving horizontal layout and action target sizes.

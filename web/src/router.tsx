@@ -1,6 +1,7 @@
 import { createRootRoute, createRoute, createRouter, Outlet, redirect } from '@tanstack/react-router';
 import { createRouteView, RouteErrorView, RouteNavigationGuard, RoutePendingView } from './components/RouteRecovery';
 import { Header } from './components/Header';
+import { AppearanceProvider } from './components/AppearanceProvider';
 import { MobileNav } from './components/MobileNav';
 import { NotFoundView } from './views/NotFoundView';
 import type { SortKey } from './types';
@@ -56,7 +57,7 @@ function validateWatchSearch(input: Record<string, unknown>): WatchRouteSearch {
 }
 
 function Shell() {
-  return <div className="app-shell"><Header /><main className="page-shell"><Outlet /></main><MobileNav /></div>;
+  return <AppearanceProvider><div className="app-shell"><Header /><main className="page-shell"><Outlet /></main><MobileNav /></div></AppearanceProvider>;
 }
 
 function Root() {
