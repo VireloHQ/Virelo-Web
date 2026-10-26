@@ -47,6 +47,38 @@ let activeThumbnails = 0;
 const knownLibraries = new Map<number, StoredLibrary>();
 let scanTask: Promise<void> | null = null;
 let scanStatus: ScanStatus = idleScanStatus();
+let libraryEdit:Promise<unknown>=Promise.resolve();
+
+function editLibraries<T>(operation:()=>Promise<T>):Promise<T> {
+  const run=()=>navigator.locks?navigator.locks.request('virelo-library-edit',operation):operation();
+  const task=libraryEdit.then(run,run);
+  libraryEdit=task.catch(()=>{});
+  return task;
+}
+
+async function matchingLibrary(libraries:StoredLibrary[],name:string,handle?:FileSystemDirectoryHandle,exceptId?:number) {
+  for(const library of libraries) {
+    if(library.id===exceptId)continue;
+    const existing=library.handle??sessionHandles.get(library.id);
+    if(handle&&existing) {
+      if(handle===existing||await handle.isSameEntry(existing))return library;
+    } else if(library.path===name) {
+      throw new Error(`A folder named "${name}" is already registered. Reconnect it in Settings. This selection method cannot distinguish folders with the same name.`);
+    }
+  }
+}
+
+async function storeHandle(library:StoredLibrary,handle:FileSystemDirectoryHandle) {
+  let stored:StoredLibrary={...library,persistent:true,handle};
+  try { await writeStore('libraries',stored);sessionHandles.delete(library.id); }
+  catch {
+    stored={...stored,persistent:false};delete stored.handle;
+    await writeStore('libraries',stored);
+    sessionHandles.set(library.id,handle);
+  }
+  sessionLibraries.delete(library.id);
+  return stored;
+}
 
 function idleScanStatus(): ScanStatus {
   return { running: false, startedAt: null, finishedAt: null, total: 0, scanned: 0, added: 0, updated: 0, skipped: 0, errors: 0, message: 'Ready' };
@@ -161,35 +193,31 @@ function normalizeFallbackPath(path: string) {
 }
 
 export async function addLocalLibrary(): Promise<Library> {
-  const selection = pickerAvailable() ? chooseDirectory() : chooseFallbackFiles();
-  const librariesPromise = readAll<StoredLibrary>('libraries');
+  const direct=pickerAvailable();
+  const selection = direct ? chooseDirectory() : chooseFallbackFiles();
   const selected = await selection;
-  const libraries = await librariesPromise;
-  const id = nextLibraryId(libraries);
-  let stored: StoredLibrary;
-  if (pickerAvailable()) {
-    const handle = selected as FileSystemDirectoryHandle | null;
-    if (!handle) throw new Error('Folder selection is not available in this browser.');
-    stored = { id, label: handle.name, path: handle.name, created_at: Date.now(), persistent: true, handle };
-    try {
+  return editLibraries(async()=>{
+    const libraries = await readAll<StoredLibrary>('libraries');
+    const id = nextLibraryId(libraries);
+    let stored: StoredLibrary;
+    if (direct) {
+      const handle = selected as FileSystemDirectoryHandle | null;
+      if (!handle) throw new Error('Folder selection is not available in this browser.');
+      const existing=await matchingLibrary(libraries,handle.name,handle);
+      stored=await storeHandle(existing??{id,label:handle.name,path:handle.name,created_at:Date.now(),persistent:true},handle);
+    } else {
+      const files = selected as LocalFile[];
+      const firstOriginalPath = files[0]?.file.webkitRelativePath.replaceAll('\\', '/');
+      const label = firstOriginalPath?.split('/')[0] || 'Selected videos';
+      await matchingLibrary(libraries,label);
+      stored = { id, label, path: label, created_at: Date.now(), persistent: false };
       await writeStore('libraries', stored);
-    } catch {
-      sessionHandles.set(id, handle);
-      stored = { ...stored, persistent: false };
-      delete stored.handle;
-      await writeStore('libraries', stored);
+      sessionLibraries.set(id, files);
     }
-  } else {
-    const files = selected as LocalFile[];
-    const firstOriginalPath = files[0]?.file.webkitRelativePath.replaceAll('\\', '/');
-    const label = firstOriginalPath?.split('/')[0] || 'Selected videos';
-    stored = { id, label, path: label, created_at: Date.now(), persistent: false };
-    sessionLibraries.set(id, files);
-    await writeStore('libraries', stored);
-  }
-  knownLibraries.set(id, stored);
-  await runScan([id], true);
-  return toLibrary(stored, true);
+    knownLibraries.set(stored.id, stored);
+    await runScan([stored.id], true);
+    return toLibrary(stored, true);
+  });
 }
 
 export async function reconnectLocalLibrary(id: number): Promise<Library> {
@@ -202,44 +230,53 @@ export async function reconnectLocalLibrary(id: number): Promise<Library> {
       ? await capable.requestPermission({ mode: 'read' }) === 'granted'
       : await requestLibraryPermission(library);
     if (!connected) throw new Error('Folder access was not granted.');
-    await runScan([id], true);
-    return toLibrary(library, true);
+    return editLibraries(async()=>{
+      const current=await readStore<StoredLibrary>('libraries',id);
+      if(!current)throw new Error('Library not found.');
+      await runScan([id], true);
+      return toLibrary(current,true);
+    });
   }
   if (pickerAvailable()) {
     const handle = await chooseDirectory();
     if (!handle) throw new Error('Folder selection is not available in this browser.');
-    library = { ...library, label: handle.name, path: handle.name, persistent: true, handle };
-    try {
-      await writeStore('libraries', library);
-    } catch {
-      sessionHandles.set(id, handle);
-      library = { ...library, persistent: false };
-      delete library.handle;
-      await writeStore('libraries', library);
-    }
-    knownLibraries.set(id, library);
-    await runScan([id], true);
-    return toLibrary(library, true);
+    return editLibraries(async()=>{
+      const libraries=await readAll<StoredLibrary>('libraries'),current=libraries.find(item=>item.id===id);
+      if(!current)throw new Error('Library not found.');
+      const duplicate=await matchingLibrary(libraries,handle.name,handle,id);
+      if(duplicate)throw new Error(`This folder is already registered as "${duplicate.label}". Reconnect that library instead.`);
+      library=await storeHandle({...current,label:handle.name,path:handle.name},handle);
+      knownLibraries.set(id, library);
+      await runScan([id], true);
+      return toLibrary(library, true);
+    });
   }
   const files = await chooseFallbackFiles();
   const firstOriginalPath = files[0]?.file.webkitRelativePath.replaceAll('\\', '/');
   const label = firstOriginalPath?.split('/')[0] || library.label;
-  library = { ...library, label, path: label, persistent: false };
-  sessionLibraries.set(id, files);
-  await writeStore('libraries', library);
-  knownLibraries.set(id, library);
-  await runScan([id], true);
-  return toLibrary(library, true);
+  return editLibraries(async()=>{
+    const libraries=await readAll<StoredLibrary>('libraries'),current=libraries.find(item=>item.id===id);
+    if(!current)throw new Error('Library not found.');
+    await matchingLibrary(libraries,label,undefined,id);
+    library = { ...current, label, path: label, persistent: false };
+    await writeStore('libraries', library);
+    sessionLibraries.set(id, files);
+    knownLibraries.set(id, library);
+    await runScan([id], true);
+    return toLibrary(library, true);
+  });
 }
 
 export async function removeLocalLibrary(id: number) {
-  const media = (await readAll<StoredMedia>('media')).filter((item) => item.library_id === id);
-  await Promise.all(media.flatMap((item) => [deleteStore('media', item.id), deleteStore('thumbnails', item.id)]));
-  await deleteStore('libraries', id);
-  sessionLibraries.delete(id);
-  sessionHandles.delete(id);
-  knownLibraries.delete(id);
-  for (const item of media) releaseMediaUrls(item.id, true);
+  return editLibraries(async()=>{
+    const media = (await readAll<StoredMedia>('media')).filter((item) => item.library_id === id);
+    await Promise.all(media.flatMap((item) => [deleteStore('media', item.id), deleteStore('thumbnails', item.id)]));
+    await deleteStore('libraries', id);
+    sessionLibraries.delete(id);
+    sessionHandles.delete(id);
+    knownLibraries.delete(id);
+    for (const item of media) releaseMediaUrls(item.id, true);
+  });
 }
 
 export async function listLocalLibraries(): Promise<Library[]> {

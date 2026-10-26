@@ -62,6 +62,7 @@ export function SettingsView() {
   const save = useMutation({ mutationFn:()=>api.saveSettings(form!), onSuccess:(data)=>{ setForm(data); client.setQueryData(['settings'], data); void client.invalidateQueries({ queryKey:['shorts'] }); } });
   const add = useMutation({ mutationFn:api.addLibrary, onSuccess:invalidateLibrary });
   const reconnect = useMutation({ mutationFn:(id:number)=>api.reconnectLibrary(id), onSuccess:invalidateLibrary });
+  const libraryError=[add.error,reconnect.error].find(error=>error&&error.name!=='AbortError');
   const remove = useMutation({ mutationFn:(id:number)=>api.removeLibrary(id), onSuccess:invalidateLibrary });
   const clearMetadata = useMutation({mutationFn:api.clearAllMetadata,onSuccess:()=>client.invalidateQueries({predicate:(query)=>['home','media','related','shorts','watch-queue','queue','search'].includes(String(query.queryKey[0]))})});
 
@@ -90,7 +91,7 @@ export function SettingsView() {
           </div>
           {!capabilities.data?.secureContext && <p className="browser-warning"><WarningCircle/> Folder access requires HTTPS or localhost.</p>}
           {capabilities.data && !capabilities.data.directoryPicker && <p className="browser-warning"><WarningCircle/> This browser can use selected files for the current session, but may ask for the folder again after a reload.</p>}
-          {(add.error || reconnect.error) && (add.error?.name !== 'AbortError' && reconnect.error?.name !== 'AbortError') && <p className="error-copy">{add.error?.message || reconnect.error?.message}</p>}
+          {libraryError&&<p className="error-copy" role="alert">{libraryError.message}</p>}
 
           <div className="library-list">
             {libraries.data?.map((library) => <div key={library.id}>

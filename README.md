@@ -31,6 +31,13 @@ The public landing page and setup guide support English, Japanese, Korean and Si
 
 Folder access requires a secure context, so production must use HTTPS. Browsers that can persist directory handles can reconnect the same folder after permission is granted. The fallback keeps selected files available for the current session and may ask for the folder again after a reload.
 
+Selecting an already registered folder with direct folder access refreshes the
+existing library instead of creating a duplicate, preserving its ID and personal
+state. Different folders with the same name remain separate. The folder-input
+fallback cannot expose a unique directory identity, so same-name selections must
+use **Reconnect** rather than Add folder; ambiguous selections are never merged.
+Previously created duplicate entries are not automatically deleted.
+
 Playback support still depends on the video formats and codecs supported by the browser. For Matroska files, Virelo Web can convert selected AC-3/E-AC-3 audio to AAC and extract SRT/SSA/ASS subtitles entirely on the device. Where browser encoders are available, lower video qualities are prepared incrementally from the current position. No media is uploaded and original files stay unchanged.
 
 AVI playback loads a self-hosted FFmpeg WebAssembly decoder only when needed

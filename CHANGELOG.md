@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Prevent duplicate folder registrations using directory-handle identity, including saved and session-only handles. Serialize add/reconnect/remove operations across tabs when Web Locks are available, preserve existing IDs and personal state, reject reconnects to another registered folder, and direct ambiguous same-name fallback selections to Reconnect without merging their data.
+
 - Play AVI videos locally in the browser using a lazily loaded, self-hosted FFmpeg WebAssembly decoder. Generate read-only-input thumbnails and bounded playback segments, keep original resolution by default, and support seeking, audio selection, quality changes and resume without uploading or modifying source files. Document browser limits and include decoder licenses and source links.
 
 - Keep the first touch on a hidden normal-player overlay reveal-only, without pausing playback, and restart its idle timer. Clear the pending touch intent when a gesture is cancelled.
