@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Leave the share-QR logo and its surrounding central area free of QR modules, including transparent parts of the logo, in both the preview and PNG download.
+
 - Add rounded share QR modules/finder corners, a centered Virelo logo and a self-contained PNG download. Move sharing out of the header into labelled video actions and Sharing settings; enlarge remaining header icons to 28px with 48px touch targets.
 
 - Add a locally generated app link/QR in the header without transferring local videos, playlists or file handles. Lazy-load the QR generator and include its MIT notice.
