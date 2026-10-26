@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Align the settings selection rail with the full highlighted row and use neutral selected and keyboard-focus states consistently with the npm app.
+
 - Leave the share-QR logo and its surrounding central area free of QR modules, including transparent parts of the logo, in both the preview and PNG download.
 
 - Add rounded share QR modules/finder corners, a centered Virelo logo and a self-contained PNG download. Move sharing out of the header into labelled video actions and Sharing settings; enlarge remaining header icons to 28px with 48px touch targets.
