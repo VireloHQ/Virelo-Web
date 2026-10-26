@@ -1,3 +1,4 @@
+import { t, useLocale } from '../i18n';
 import { CaretRight, type Icon } from '@phosphor-icons/react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { cssTimeToMilliseconds } from '../utils/motion-time';
@@ -15,6 +16,7 @@ export function SettingsNavigation({ sections, activeSection, detailOpen, onSele
   detailOpen: boolean;
   onSelect: (id: string) => void;
 }) {
+  useLocale();
   const sidebar = useRef<HTMLElement>(null), selection = useRef<HTMLSpanElement>(null);
   const pointerSelection = useRef(false);
   const animations = useRef<{ selection?: Animation; panel?: Animation }>({});
@@ -58,7 +60,7 @@ export function SettingsNavigation({ sections, activeSection, detailOpen, onSele
     animations.current.panel?.cancel();
   }, []);
 
-  return <nav ref={sidebar} className="settings-sidebar" aria-label="Settings sections">
+  return <nav ref={sidebar} className="settings-sidebar" aria-label={t("Settings sections")}>
     <span ref={selection} className="settings-selection" aria-hidden="true"/>
     {sections.map((section) => <button
       key={section.id}
@@ -70,7 +72,7 @@ export function SettingsNavigation({ sections, activeSection, detailOpen, onSele
       onClick={event => { pointerSelection.current = event.detail > 0 && (section.id !== activeSection || !detailOpen); onSelect(section.id); }}
     >
       <section.icon className="settings-nav-icon" aria-hidden="true"/>
-      <span className="settings-nav-copy"><strong>{section.label}</strong><small>{section.description}</small></span>
+      <span className="settings-nav-copy"><strong>{t(section.label)}</strong><small>{t(section.description)}</small></span>
       <CaretRight className="settings-nav-chevron" aria-hidden="true"/>
     </button>)}
   </nav>;

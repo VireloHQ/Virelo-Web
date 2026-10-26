@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { stripTypeScriptTypes } from 'node:module';
 const data = source => 'data:text/javascript;base64,' + Buffer.from(stripTypeScriptTypes(source)).toString('base64');
-const messagesUrl = data(await readFile(new URL('../web/src/i18n/public-messages.ts', import.meta.url), 'utf8'));
-const source = (await readFile(new URL('../web/src/i18n/public-locale.ts', import.meta.url), 'utf8'))
-  .replace("'./public-messages'", JSON.stringify(messagesUrl));
-const { resolvePublicLocale: resolve, translatePublic: t, publicLanguages, isPublicLocale } = await import(data(source));
-const { publicMessages } = await import(messagesUrl);
+const source = await readFile(new URL('../web/src/i18n/locale.ts', import.meta.url), 'utf8');
+const { resolveLocale: resolve, translate, languages: publicLanguages, isLocale: isPublicLocale } = await import(data(source));
+const catalogs=Object.fromEntries(await Promise.all(publicLanguages.map(async language=>[language.value,JSON.parse(await readFile(new URL('../web/src/i18n/messages/'+language.value+'.json',import.meta.url),'utf8'))])));
+const publicMessages=catalogs.en;
+const t=(locale,message,values)=>translate(catalogs[locale],locale,message,values);
 
 test('explicit locale wins, browser language order is respected, and unsupported languages fall back safely', () => {
   assert.equal(resolve('ko', ['ja-JP', 'en-US']), 'ko');
@@ -23,12 +23,11 @@ test('explicit locale wins, browser language order is respected, and unsupported
   }
 });
 
-test('every public message has Japanese, Korean and Simplified Chinese with an English source', () => {
-  assert.equal(publicLanguages.length, 4);
+test('public and app messages share the same five-language catalog', () => {
+  assert.equal(publicLanguages.length, 5);
   assert.ok(Object.keys(publicMessages).length >= 190);
-  for (const [message, translations] of Object.entries(publicMessages)) {
-    assert.equal(translations.length, 3);
-    for (const locale of ['en', 'ja', 'ko', 'zh-CN']) {
+  for (const message of Object.keys(publicMessages)) {
+    for (const locale of ['en', 'ja', 'ko', 'zh-CN', 'ru']) {
       const translated = t(locale, message);
       assert.equal(typeof translated, 'string');
       assert.ok(translated.trim().length > 0, locale + ': ' + message);
@@ -52,7 +51,7 @@ test('Shorts are named as a video format, not just short-duration videos', async
   assert.match(t('ko', 'Shorts.'), /쇼츠/);
   assert.match(t('ja', 'Your own feed.'), /スワイプ/);
   assert.equal(Object.hasOwn(publicMessages, 'Short videos.'), false);
-  for (const translations of Object.values(publicMessages)) assert.doesNotMatch(translations[0], /短い動画/);
+  for (const translation of Object.values(catalogs.ja)) assert.doesNotMatch(translation, /短い動画/);
   const landing = await readFile(new URL('../web/src/views/LandingView.tsx', import.meta.url), 'utf8');
   assert.ok(landing.includes('t("Shorts.")'));
 });

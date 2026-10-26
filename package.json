@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "verify:deployment": "node scripts/verify-deployment.mjs",
     "typecheck": "tsc -p tsconfig.web.json",
+    "i18n:check": "node scripts/check-i18n.mjs",
     "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test tests/*.test.mjs",
     "check": "npm run typecheck && npm run build && npm test"
   },

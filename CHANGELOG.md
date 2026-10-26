@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Localize the player and settings into English, Japanese, Simplified Chinese, Korean and Russian. Share language preferences and catalogs with the landing/setup pages, preserve playback on changes, and add translation completeness checks.
+
 - Center the checkmark inside accent-color swatches without changing their colors or 44px hit targets.
 
 - Add Appearance settings with four original controller layouts and preset/custom accent colors. Save preferences locally in this browser without adding accounts or uploading files. Preserve playback state, mobile controls and keyboard access.

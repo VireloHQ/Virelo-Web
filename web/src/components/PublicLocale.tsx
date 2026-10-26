@@ -1,7 +1,8 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useLayoutEffect, type ReactNode } from 'react';
 import { Globe } from '@phosphor-icons/react';
 import { Select } from './Select';
-import { PUBLIC_LOCALE_KEY, isPublicLocale, publicLanguages, resolvePublicLocale, translatePublic, type PublicLocale } from '../i18n/public-locale';
+import { isPublicLocale, publicLanguages, translatePublic, type PublicLocale } from '../i18n/public-locale';
+import { useLocale, setLocale, getLocale } from '../i18n';
 import type { PublicMessage } from '../i18n/public-messages';
 
 interface LocaleContext {
@@ -10,35 +11,16 @@ interface LocaleContext {
   t: (message: PublicMessage, values?: Record<string, string>) => string;
 }
 const Context = createContext<LocaleContext | null>(null);
-let sessionLocale: PublicLocale | undefined;
-const languages = () => navigator.languages?.length ? navigator.languages : [navigator.language];
-function initialLocale(): PublicLocale {
-  let saved: unknown = sessionLocale;
-  try { const stored = localStorage.getItem(PUBLIC_LOCALE_KEY); if (isPublicLocale(stored)) saved = stored; } catch { /* Keep an in-memory choice when storage is blocked. */ }
-  return resolvePublicLocale(saved, languages());
-}
 const description: PublicMessage = 'Turn local videos into a private streaming-style library. Browse and play in your browser without uploading your files.';
 const softwareDescription: PublicMessage = 'A private, local-first video library with search, favorites, watch progress, queues, and a Shorts feed.';
 
 export function PublicLocaleProvider({ children, page }: { children: ReactNode; page: 'landing' | 'setup' }) {
-  const [locale, setLocale] = useState(initialLocale);
+  const locale = useLocale();
   const changeLocale = (value: PublicLocale) => {
-    sessionLocale = value;
-    setLocale(value);
-    try { localStorage.setItem(PUBLIC_LOCALE_KEY, value); } catch { /* Locale changes still work for this session. */ }
+    void setLocale(value).catch(() => {});
   };
-  useEffect(() => {
-    const storage = (event: StorageEvent) => {
-      if (event.key !== PUBLIC_LOCALE_KEY && event.key !== null) return;
-      const next = resolvePublicLocale(event.newValue, languages());
-      sessionLocale = next; setLocale(next);
-    };
-    window.addEventListener('storage', storage);
-    return () => window.removeEventListener('storage', storage);
-  }, []);
   useLayoutEffect(() => {
     const t = (message: PublicMessage) => translatePublic(locale, message);
-    const previousLang = document.documentElement.lang;
     document.documentElement.lang = locale;
     const canonical = 'https://virelo.riyo.me/' + (page === 'setup' ? 'setup' : '');
     const summary = t(page === 'setup'
@@ -76,7 +58,7 @@ export function PublicLocaleProvider({ children, page }: { children: ReactNode; 
       } catch { /* Invalid optional metadata must never prevent the page from rendering. */ }
     }
     return () => {
-      document.documentElement.lang = previousLang;
+      document.documentElement.lang = getLocale();
       for (const [node, attribute, value] of saved) { if (value === null) node.removeAttribute(attribute); else node.setAttribute(attribute, value); }
       if (schema && originalSchema) schema.textContent = originalSchema;
     };

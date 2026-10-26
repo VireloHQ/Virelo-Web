@@ -1,3 +1,4 @@
+import { t, useLocale } from '../i18n';
 import { Suspense, createElement, useCallback, useRef, useState, type ComponentType, type FunctionComponent } from 'react';
 import { useBlocker, useRouter, type ErrorComponentProps } from '@tanstack/react-router';
 import { ArrowClockwise, X } from '@phosphor-icons/react';
@@ -29,6 +30,7 @@ export function RoutePendingView({ viewForPath }: { viewForPath: (pathname: stri
 }
 
 export function RouteErrorView({ error, reset }: ErrorComponentProps) {
+  useLocale();
   const router = useRouter();
   const [retrying, setRetrying] = useState(false);
   const retry = async () => {
@@ -43,16 +45,17 @@ export function RouteErrorView({ error, reset }: ErrorComponentProps) {
     } finally { setRetrying(false); }
   };
   return <section className="route-error-view" aria-labelledby="route-error-title">
-    <h1 id="route-error-title">This page is temporarily unavailable</h1>
-    <p>{error instanceof RouteLoadError ? 'Check your connection and try again. If the app was updated, reload when you are ready.' : 'The page could not be displayed. You can try opening it again.'}</p>
+    <h1 id="route-error-title">{t("This page is temporarily unavailable")}</h1>
+    <p>{error instanceof RouteLoadError ? t("Check your connection and try again. If the app was updated, reload when you are ready.") : t("The page could not be displayed. You can try opening it again.")}</p>
     <div className="route-recovery-actions">
-      <button disabled={retrying} onClick={() => void retry()}><ArrowClockwise aria-hidden="true" />{retrying ? 'Retrying…' : 'Try again'}</button>
-      <button className="route-recovery-secondary" onClick={() => window.location.reload()}>Reload app</button>
+      <button disabled={retrying} onClick={() => void retry()}><ArrowClockwise aria-hidden="true" />{retrying ? t("Retrying…") : t("Try again")}</button>
+      <button className="route-recovery-secondary" onClick={() => window.location.reload()}>{t("Reload app")}</button>
     </div>
   </section>;
 }
 
 export function RouteNavigationGuard({ viewForPath }: { viewForPath: (pathname: string) => RouteView | undefined }) {
+  useLocale();
   const router = useRouter();
   const sequence = useRef(0);
   const [notice, setNotice] = useState<{ retry: () => void } | null>(null);
@@ -78,11 +81,11 @@ export function RouteNavigationGuard({ viewForPath }: { viewForPath: (pathname: 
   // stays mounted, with its current source/time/volume, if the download fails.
   useBlocker({ shouldBlockFn: shouldBlock, enableBeforeUnload: false });
   return notice ? <aside className="route-recovery-notice" role="status" aria-live="polite">
-    <div><strong>Couldn’t open that page</strong><p>Your current screen is still available. Try again, or reload when you’re ready.</p></div>
+    <div><strong>{t("Couldn’t open that page")}</strong><p>{t("Your current screen is still available. Try again, or reload when you’re ready.")}</p></div>
     <div className="route-recovery-actions">
-      <button onClick={notice.retry}><ArrowClockwise aria-hidden="true" />Try again</button>
-      <button className="route-recovery-secondary" onClick={() => window.location.reload()}>Reload app</button>
+      <button onClick={notice.retry}><ArrowClockwise aria-hidden="true" />{t("Try again")}</button>
+      <button className="route-recovery-secondary" onClick={() => window.location.reload()}>{t("Reload app")}</button>
     </div>
-    <button className="route-recovery-dismiss" aria-label="Dismiss message" onClick={() => setNotice(null)}><X aria-hidden="true" /></button>
+    <button className="route-recovery-dismiss" aria-label={t("Dismiss message")} onClick={() => setNotice(null)}><X aria-hidden="true" /></button>
   </aside> : null;
 }

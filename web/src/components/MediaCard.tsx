@@ -1,3 +1,4 @@
+import { t, useLocale } from '../i18n';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useFavorite } from '../hooks/useFavorite';
@@ -11,6 +12,7 @@ import { MediaContextMenu } from './MediaContextMenu';
 const HOVER_CAPABLE = typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 export function MediaCard({item, compact=false, short=false, playDirect=false, preview=false, onHoverChange, layout='auto'}:{item:MediaItem;layout?:'auto'|'landscape'|'poster';compact?:boolean;short?:boolean;playDirect?:boolean;preview?:boolean;onHoverChange?:(hovered:boolean)=>void}) {
+  useLocale();
   const navigate = useNavigate();
   const { favorite, error: favoriteError, toggle: toggleFavorite } = useFavorite(item);
   const cardRef = useRef<HTMLAnchorElement>(null);
@@ -45,9 +47,9 @@ export function MediaCard({item, compact=false, short=false, playDirect=false, p
   const imageKinds: Array<'poster' | 'backdrop' | 'thumbnail'> = isPoster ? ['poster', 'backdrop', 'thumbnail'] : ['backdrop', 'thumbnail', 'poster'];
   const resolvedItem = { ...item, thumbnail_path: thumbnail.data === undefined ? item.thumbnail_path : thumbnail.data };
   const imageSources = [...new Set(imageKinds.filter(kind => Boolean(kind === 'thumbnail' ? resolvedItem.thumbnail_path : kind === 'poster' ? item.poster_path : item.backdrop_path)).map(kind => artwork(resolvedItem, kind)))];
-  const details = [item.kind === 'series' && item.season !== null && item.episode !== null ? `S${item.season} E${item.episode}` : item.year, item.duration ? `${Math.max(1, Math.round(item.duration / 60))} min` : null].filter(Boolean).join(' · ');
+  const details = [item.kind === 'series' && item.season !== null && item.episode !== null ? `S${item.season} E${item.episode}` : item.year, item.duration ? t('{count} min',{count:Math.max(1,Math.round(item.duration/60))}) : null].filter(Boolean).join(' · ');
   const destination = short ? '/app/shorts' : playDirect ? '/app/watch/$mediaId' : '/app/title/$mediaId';
-  const progressLabel = playDirect && (item.progress_position || 0) > 10 ? `Resume ${formatTime(item.progress_position || 0)}` : null;
+  const progressLabel = playDirect && (item.progress_position || 0) > 10 ? t('Resume {value0}',{value0:formatTime(item.progress_position||0)}) : null;
   const previewStart = (item.progress_position || 0) > 5 ? item.progress_position! : 0;
   const openMenu = (x:number, y:number) => setMenuPosition({x, y});
   const clearLongPress = () => {
@@ -97,7 +99,7 @@ export function MediaCard({item, compact=false, short=false, playDirect=false, p
         <strong title={item.title}>{item.title}</strong>
         {(progressLabel || details) && <span>{progressLabel || details}</span>}
       </div>
-      {favoriteError && <span className="error-copy" role="alert">{favoriteError}</span>}
+      {favoriteError && <span className="error-copy" role="alert">{t(favoriteError)}</span>}
       {menuPosition && <MediaContextMenu
         item={{...item, liked: favorite ? 1 : 0}}
         position={menuPosition}

@@ -37,7 +37,7 @@ Live volume leveling is disabled on Safari/iOS WebKit to avoid native-HLS
 audio-routing problems. Original playback remains available. The implementation
 does not claim full-file EBU R128 or true-peak mastering conformance.
 
-The public landing page and setup guide support English, Japanese, Korean and Simplified Chinese. They initially follow the browser's preferred supported language, with English as the fallback. Use the globe button in the header to switch languages; the choice is saved locally and shared across the public pages and tabs. If browser storage is blocked, the choice is retained for the current session. Player/library controls and the recorded demo remain in their existing language.
+The player, library, settings, landing page and setup guide support English, Japanese, Simplified Chinese, Korean and Russian. They initially follow the browser's preferred supported language, with English as the fallback. Change language in **Settings → Appearance → Language** or use the globe menu on the public pages. The choice is shared across pages and tabs; if browser storage is blocked, it remains available in the current tab. Translations are bundled with Virelo. User filenames, titles, playlist names and recorded demo footage are not translated. See [Localization](docs/LOCALIZATION.md) to add a language.
 
 Folder access requires a secure context, so production must use HTTPS. Browsers that can persist directory handles can reconnect the same folder after permission is granted. The fallback keeps selected files available for the current session and may ask for the folder again after a reload.
 

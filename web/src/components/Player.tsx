@@ -1,3 +1,4 @@
+import { t, useLocale } from '../i18n';
 import { useEffect, useRef, useState } from 'react';
 import { useVolumeLeveling } from '../hooks/useVolumeLeveling';
 import { ArrowsOut, FastForward, Pause, PictureInPicture, Play, Repeat, Rewind, SpeakerHigh, SpeakerSlash } from '@phosphor-icons/react';
@@ -43,6 +44,7 @@ interface PlayerProps {
 }
 
 export function Player({item,queue,queueIndex,shuffled,onShuffle,onEnded,onNext,onPrev,canGoNext=true,canGoPrev=true,autoPlay,shorts,repeatMode,onRepeatChange}:PlayerProps) {
+  useLocale();
   const aviSource = /\.avi$/i.test(item.filename);
   const videoRef = useRef<HTMLVideoElement>(null);
   const sourceTransition = useRef(false);
@@ -566,14 +568,14 @@ export function Player({item,queue,queueIndex,shuffled,onShuffle,onEnded,onNext,
     onSelectSubtitle={selectSubtitle}
     onSelectQuality={selectQuality}
   />;
-  return <div className={`player${shorts?' short-player':''}${queue?.length?' has-queue':''}${controlsVisible?' controls-visible':''}`} ref={containerRef} tabIndex={0} aria-label={item.title+' player'}
+  return <div className={`player${shorts?' short-player':''}${queue?.length?' has-queue':''}${controlsVisible?' controls-visible':''}`} ref={containerRef} tabIndex={0} aria-label={t("{value0} player", { value0: item.title })}
     onContextMenu={event=>{event.preventDefault();event.stopPropagation();revealControls();setContextPosition({x:event.clientX,y:event.clientY});}}
     onDoubleClick={()=>void fullscreen()} onPointerMove={(event)=>{clearLongPress();if(event.pointerType==='mouse'){revealControls();scheduleControlsHide();}}} onPointerDown={startLongPress} onPointerUp={()=>{clearLongPress();scheduleControlsHide();}} onPointerCancel={()=>{touchRevealOnly.current=false;clearLongPress();scheduleControlsHide();}} onPointerLeave={()=>scheduleControlsHide(300)} onFocusCapture={revealControls} onBlurCapture={()=>scheduleControlsHide(300)}
     onKeyDown={event=>{revealControls();scheduleControlsHide();if(shorts&&(event.target===event.currentTarget||event.target===videoRef.current)&&[' ','k','Enter'].includes(event.key)){event.preventDefault();event.stopPropagation();toggle();return;}if(event.target===event.currentTarget&&(event.key==='ContextMenu'||(event.shiftKey&&event.key==='F10'))){event.preventDefault();const bounds=event.currentTarget.getBoundingClientRect();setContextPosition({x:bounds.left+24,y:bounds.top+24,keyboard:true});}}}>
     <video
       className={shorts?'video-presentation short-video':'video-presentation'}
       tabIndex={shorts?0:undefined}
-      aria-label={shorts?`${item.title}. Press Space to play or pause.`:undefined}
+      aria-label={shorts?t('{value0}. Press Space to play or pause.',{value0:item.title}):undefined}
       style={presentation.style}
       ref={videoRef}
       src={qualityUrl||((!aviSource||playbackInfo?.requiresVideoTranscode===false)?source.url:undefined)||undefined}
@@ -604,17 +606,17 @@ export function Player({item,queue,queueIndex,shuffled,onShuffle,onEnded,onNext,
         key={subtitleUrl}
         src={subtitleUrl}
         srcLang={playbackInfo?.subtitleTracks.find((track)=>track.index===selectedSubtitle)?.language||'und'}
-        label={playbackInfo?.subtitleTracks.find((track)=>track.index===selectedSubtitle)?.title||'Subtitles'}
+        label={playbackInfo?.subtitleTracks.find((track)=>track.index===selectedSubtitle)?.title||t("Subtitles")}
         onText={setActiveCaption}
       />}
     </video>
     <audio key={externalAudioUrl||'native-audio'} ref={audioRef} src={externalAudioUrl||undefined} preload="auto" onTimeUpdate={event=>reportBackgroundAudio(event.currentTarget)} onLoadedMetadata={(event)=>finishPreparedAudio(event.currentTarget)} onCanPlay={(event)=>finishPreparedAudio(event.currentTarget)}/>
     <DraggableCaption key={`${item.id}:${selectedSubtitle}`} text={activeCaption} controlsVisible={controlsVisible} containerRef={containerRef} onDraggingChange={(dragging)=>{if(dragging)revealControls();else window.setTimeout(scheduleControlsHide,0);}}/>
-    {source.loading && <div className="player-status"><LoadingSpinner/><strong>Opening video…</strong><span>Reading the selected local file.</span></div>}
-    {aviSource&&!playbackInfo&&!source.loading&&!source.error&&!playbackError&&<div className="player-status"><LoadingSpinner/><strong>Preparing AVI playback…</strong><span>Loading local playback support. No video files are uploaded or changed.</span></div>}
-    {preparing&&preparing!=='subtitles'&&playRequested&&!playing&&<div className="player-status"><LoadingSpinner/><strong>{preparing==='audio'?'Preparing audio…':preparing==='quality'?`Preparing ${selectedQuality&&selectedQuality>=2160?'4K':`${selectedQuality}p`}…`:'Preparing subtitles…'}</strong><span>{preparationProgress>0?`${Math.round(preparationProgress*100)}% · `:''}{preparing==='audio'?'Preparing the selected audio from your current position.':preparing==='quality'?'Preparing the next few seconds locally. Your original file stays unchanged.':'Processing locally in your browser.'}</span></div>}
-    {preparing==='subtitles'&&<span className="sr-only" role="status">Preparing subtitles…</span>}
-    {(source.error || playbackError) && <div className="player-status error"><strong>Playback unavailable</strong><span>{source.error || playbackError}</span></div>}
+    {source.loading && <div className="player-status"><LoadingSpinner/><strong>{t("Opening video…")}</strong><span>{t("Reading the selected local file.")}</span></div>}
+    {aviSource&&!playbackInfo&&!source.loading&&!source.error&&!playbackError&&<div className="player-status"><LoadingSpinner/><strong>{t("Preparing AVI playback…")}</strong><span>{t("Loading local playback support. No video files are uploaded or changed.")}</span></div>}
+    {preparing&&preparing!=='subtitles'&&playRequested&&!playing&&<div className="player-status"><LoadingSpinner/><strong>{preparing==='audio'?t("Preparing audio…"):preparing==='quality'?t("Preparing {value0}…", { value0: selectedQuality&&selectedQuality>=2160?'4K':`${selectedQuality}p` }):t("Preparing subtitles…")}</strong><span>{preparationProgress>0?`${Math.round(preparationProgress*100)}% · `:''}{preparing==='audio'?t("Preparing the selected audio from your current position."):preparing==='quality'?t("Preparing the next few seconds locally. Your original file stays unchanged."):t("Processing locally in your browser.")}</span></div>}
+    {preparing==='subtitles'&&<span className="sr-only" role="status">{t("Preparing subtitles…")}</span>}
+    {(source.error || playbackError) && <div className="player-status error"><strong>{t("Playback unavailable")}</strong><span>{source.error || playbackError}</span></div>}
     {shorts?<ShortsPlayerControls item={item} current={current} duration={duration} muted={muted} pip={pip}
       pipSupported={pipSupported} onSeek={seek} onMute={toggleMute} onPip={()=>void togglePip()} onNext={shorts.onNext}>
       {playbackSettings()}
@@ -630,16 +632,16 @@ export function Player({item,queue,queueIndex,shuffled,onShuffle,onEnded,onNext,
     {contextPosition&&shorts&&<ShortsContextMenu item={item} position={contextPosition} returnFocus={videoRef.current}
       onPlay={()=>{wantsPlayback.current=true;setPlayRequested(true);requestVideoPlayback();}}
       onDetails={shorts.onDetails} onClose={()=>setContextPosition(null)} />}
-    {contextPosition&&!shorts&&<PlayerActionMenu label="Video actions" position={contextPosition} returnFocus={containerRef.current} onClose={()=>setContextPosition(null)}
+    {contextPosition&&!shorts&&<PlayerActionMenu label={t("Video actions")} position={contextPosition} returnFocus={containerRef.current} onClose={()=>setContextPosition(null)}
       actions={[
         {label:pauseAction?'Pause':'Play',icon:pauseAction?<Pause/>:<Play/>,action:toggle},
-        {label:'Rewind 10 seconds',icon:<Rewind/>,action:()=>seekBy(-10)},
-        {label:'Fast-forward 30 seconds',icon:<FastForward/>,action:()=>seekBy(30)},
+        {label:t("Rewind 10 seconds"),icon:<Rewind/>,action:()=>seekBy(-10)},
+        {label:t("Fast-forward 30 seconds"),icon:<FastForward/>,action:()=>seekBy(30)},
         {label:muted?'Unmute':'Mute',icon:muted?<SpeakerSlash/>:<SpeakerHigh/>,action:toggleMute},
-        {label:'Repeat video',icon:<Repeat/>,checked:repeat==='one',action:()=>changeRepeat(repeat==='one'?'off':'one')},
-        {label:'Settings',content:playbackSettings(true)},
+        {label:t("Repeat video"),icon:<Repeat/>,checked:repeat==='one',action:()=>changeRepeat(repeat==='one'?'off':'one')},
+        {label:t("Settings"),content:playbackSettings(true)},
         ...(pipSupported?[{label:pip?'Exit Picture in Picture':'Picture in Picture',icon:<PictureInPicture/>,action:()=>void togglePip()}]:[]),
-        {label:'Fullscreen',icon:<ArrowsOut/>,action:()=>void fullscreen()}
+        {label:t("Fullscreen"),icon:<ArrowsOut/>,action:()=>void fullscreen()}
       ]}/>}
   </div>;
 }

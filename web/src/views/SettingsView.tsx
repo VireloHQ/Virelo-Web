@@ -1,3 +1,5 @@
+import { Trans } from '../i18n/Trans';
+import { t, useLocale } from '../i18n';
 import { PageSkeleton } from '../components/PageSkeleton';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -35,6 +37,7 @@ const QUEUE_OPTIONS = [
 type SettingsSectionId = (typeof settingsSections)[number]['id'];
 
 export function SettingsView() {
+  useLocale();
   const client = useQueryClient();
   const settingsQuery = useQuery({ queryKey:['settings'], queryFn:api.settings });
   const libraries = useQuery({ queryKey:['libraries'], queryFn:api.libraries });
@@ -83,77 +86,77 @@ export function SettingsView() {
   };
 
   return <div className={`content-view settings-view${mobileDetail?' settings-detail-open':''}`}>
-    <header className="settings-heading"><h1>Settings</h1><div className="settings-heading-actions"><span aria-live="polite">{save.isSuccess && !hasChanges && <span className="settings-saved"><CheckCircle/> Saved</span>}</span><Button isPending={save.isPending} isDisabled={!hasChanges} onPress={()=>save.mutate()}>Save settings</Button></div></header>
-    {save.error && <p className="error-copy settings-save-error">{save.error.message}</p>}
+    <header className="settings-heading"><h1>{t("Settings")}</h1><div className="settings-heading-actions"><span aria-live="polite">{save.isSuccess && !hasChanges && <span className="settings-saved"><CheckCircle/> {t("Saved")}</span>}</span><Button isPending={save.isPending} isDisabled={!hasChanges} onPress={()=>save.mutate()}>{t("Save settings")}</Button></div></header>
+    {save.error && <p className="error-copy settings-save-error">{t(save.error.message)}</p>}
 
     <div className="settings-layout">
       <SettingsNavigation sections={settingsSections} activeSection={activeSection} detailOpen={mobileDetail} onSelect={openSection}/>
 
       <div className="settings-content">
-        <button type="button" className="settings-back" onClick={closeSection}><ArrowLeft aria-hidden="true"/> All settings</button>
+        <button type="button" className="settings-back" onClick={closeSection}><ArrowLeft aria-hidden="true"/> {t("All settings")}</button>
         {activeSection==='appearance'&&<AppearanceSettings/>}
         {activeSection === 'sharing' && <SharingSettings webOnly/>}
         {activeSection === 'libraries' && <section id="settings-panel-libraries" className="settings-card settings-section" aria-labelledby="settings-title-libraries">
           <div className="settings-card-head">
-            <div><h2 id="settings-title-libraries" tabIndex={-1}>Libraries</h2><p>Choose folders that Virelo can read in this browser.</p></div>
-            <Button isPending={add.isPending} onPress={()=>add.mutate()}><FolderPlus/> Add folder</Button>
+            <div><h2 id="settings-title-libraries" tabIndex={-1}>{t("Libraries")}</h2><p>{t("Choose folders that Virelo can read in this browser.")}</p></div>
+            <Button isPending={add.isPending} onPress={()=>add.mutate()}><FolderPlus/> {t("Add folder")}</Button>
           </div>
-          {!capabilities.data?.secureContext && <p className="browser-warning"><WarningCircle/> Folder access requires HTTPS or localhost.</p>}
-          {capabilities.data && !capabilities.data.directoryPicker && <p className="browser-warning"><WarningCircle/> This browser can use selected files for the current session, but may ask for the folder again after a reload.</p>}
-          {libraryError&&<p className="error-copy" role="alert">{libraryError.message}</p>}
+          {!capabilities.data?.secureContext && <p className="browser-warning"><WarningCircle/> {t("Folder access requires HTTPS or localhost.")}</p>}
+          {capabilities.data && !capabilities.data.directoryPicker && <p className="browser-warning"><WarningCircle/> {t("This browser can use selected files for the current session, but may ask for the folder again after a reload.")}</p>}
+          {libraryError&&<p className="error-copy" role="alert">{t(libraryError.message)}</p>}
 
           <div className="library-list">
             {libraries.data?.map((library) => <div key={library.id}>
               <div>
                 <strong>{library.label}</strong>
-                <span className={library.connected ? 'library-connected' : 'library-disconnected'}>{library.connected ? <CheckCircle/> : <WarningCircle/>}{library.connected ? 'Connected' : 'Reconnect required'}{library.persistent ? '' : ' · session only'}</span>
+                <span className={library.connected ? 'library-connected' : 'library-disconnected'}>{library.connected ? <CheckCircle/> : <WarningCircle/>}{library.connected ? t("Connected") : t("Reconnect required")}{!library.persistent && <> · {t("Temporary")}</>}</span>
               </div>
               <div className="library-actions">
-                {!library.connected && <Button size="sm" variant="secondary" isPending={reconnect.isPending} onPress={()=>reconnect.mutate(library.id)}>Reconnect</Button>}
-                <Button isIconOnly variant="ghost" aria-label={`Remove ${library.label}`} onPress={()=>remove.mutate(library.id)}><Trash/></Button>
+                {!library.connected && <Button size="sm" variant="secondary" isPending={reconnect.isPending} onPress={()=>reconnect.mutate(library.id)}>{t("Reconnect")}</Button>}
+                <Button isIconOnly variant="ghost" aria-label={t("Remove {value0}", { value0: library.label })} onPress={()=>remove.mutate(library.id)}><Trash/></Button>
               </div>
             </div>)}
-            {libraries.data?.length === 0 && <p className="settings-empty-copy">No folders selected.</p>}
+            {libraries.data?.length === 0 && <p className="settings-empty-copy">{t("No folders selected.")}</p>}
           </div>
 
           <div className="scan-strip">
-            {scan.data?.running ? <ScanProgress status={scan.data} compact/> : <div><CheckCircle/><span><strong>{scan.data?.message || 'Ready'}</strong></span></div>}
-            <Button variant="secondary" isDisabled={scan.data?.running || !libraries.data?.length} onPress={()=>void startScan()}><ArrowsClockwise/> Scan now</Button>
+            {scan.data?.running ? <ScanProgress status={scan.data} compact/> : <div><CheckCircle/><span><strong>{t(scan.data?.message || 'Ready')}</strong></span></div>}
+            <Button variant="secondary" isDisabled={scan.data?.running || !libraries.data?.length} onPress={()=>void startScan()}><ArrowsClockwise/> {t("Scan now")}</Button>
           </div>
         </section>}
 
         {activeSection === 'metadata' && <section id="settings-panel-metadata" className="settings-card settings-section" aria-labelledby="settings-title-metadata">
-          <div className="settings-card-head"><div><h2 id="settings-title-metadata" tabIndex={-1}>Metadata</h2><p>Manage titles and artwork stored in this browser.</p></div></div>
-          <div className="setting-row settings-action-row"><div className="setting-copy"><div><strong>Clear all metadata</strong><p>Reset titles and remove matched descriptions and artwork from every added library. Videos, generated thumbnails, favorites and watch progress stay intact.</p></div></div><ConfirmationDialog triggerLabel="Clear all metadata" title="Clear all metadata?" confirmLabel="Clear metadata" onConfirm={()=>clearMetadata.mutateAsync()}><p>Clear matched titles, descriptions and artwork from <strong>every added library</strong>. Titles will return to filenames.</p><p>Your videos, generated thumbnails, favorites and watch progress will stay intact.</p></ConfirmationDialog></div>
-          <div role="status">{clearMetadata.isSuccess&&<p>Metadata cleared for {clearMetadata.data.cleared} videos.</p>}</div>
+          <div className="settings-card-head"><div><h2 id="settings-title-metadata" tabIndex={-1}>{t("Metadata")}</h2><p>{t("Manage titles and artwork stored in this browser.")}</p></div></div>
+          <div className="setting-row settings-action-row"><div className="setting-copy"><div><strong>{t("Clear all metadata")}</strong><p>{t("Reset titles and remove matched descriptions and artwork from every added library. Videos, generated thumbnails, favorites and watch progress stay intact.")}</p></div></div><ConfirmationDialog triggerLabel={t("Clear all metadata")} title={t("Clear all metadata?")} confirmLabel={t("Clear metadata")} onConfirm={()=>clearMetadata.mutateAsync()}><p><Trans message="Clear matched titles, descriptions and artwork from {value0}. Titles will return to filenames." values={{value0:<strong>{t("every added library")}</strong>}}/></p><p>{t("Your videos, generated thumbnails, favorites and watch progress will stay intact.")}</p></ConfirmationDialog></div>
+          <div role="status">{clearMetadata.isSuccess&&<p><Trans message="Metadata cleared for {value0} videos." values={{value0:clearMetadata.data.cleared}}/></p>}</div>
         </section>}
 
         {activeSection === 'playback' && <section id="settings-panel-playback" className="settings-card settings-section" aria-labelledby="settings-title-playback">
-          <div className="settings-card-head"><div><h2 id="settings-title-playback" tabIndex={-1}>Playback</h2><p>Choose what happens when a video ends in a folder queue.</p></div></div>
+          <div className="settings-card-head"><div><h2 id="settings-title-playback" tabIndex={-1}>{t("Playback")}</h2><p>{t("Choose what happens when a video ends in a folder queue.")}</p></div></div>
           <QueueLayoutSetting/>
           <VolumeLevelingSetting/>
-          <div className="setting-row"><div className="setting-copy"><div><strong>Queue advance</strong><p>Auto-advance, loop, or manually step through the folder.</p></div></div>
-            <Select className="settings-picker" label="Queue advance" value={form.queueBehavior} options={QUEUE_OPTIONS} align="end" onChange={(value)=>setForm({...form, queueBehavior:value as QueueBehavior})}/></div>
+          <div className="setting-row"><div className="setting-copy"><div><strong>{t("Queue advance")}</strong><p>{t("Auto-advance, loop, or manually step through the folder.")}</p></div></div>
+            <Select className="settings-picker" label={t("Queue advance")} value={form.queueBehavior} options={QUEUE_OPTIONS.map(option=>({...option,label:t(option.label)}))} align="end" onChange={(value)=>setForm({...form, queueBehavior:value as QueueBehavior})}/></div>
         </section>}
 
         {activeSection === 'shorts' && <section id="settings-panel-shorts" className="settings-card settings-section" aria-labelledby="settings-title-shorts">
-          <div className="settings-card-head"><div><h2 id="settings-title-shorts" tabIndex={-1}>Shorts</h2><p>Choose which local videos appear in the vertical feed.</p></div></div>
-          <SettingSwitch checked={form.shortsIncludeLandscapes} onChange={(value)=>setForm({...form, shortsIncludeLandscapes:value})} title="Include landscape videos" description="Fit landscape videos by width in the Shorts player."/>
+          <div className="settings-card-head"><div><h2 id="settings-title-shorts" tabIndex={-1}>{t("Shorts")}</h2><p>{t("Choose which local videos appear in the vertical feed.")}</p></div></div>
+          <SettingSwitch checked={form.shortsIncludeLandscapes} onChange={(value)=>setForm({...form, shortsIncludeLandscapes:value})} title={t("Include landscape videos")} description={t("Fit landscape videos by width in the Shorts player.")}/>
         </section>}
 
         {activeSection === 'privacy' && <section id="settings-panel-privacy" className="settings-card settings-section compact-card" aria-labelledby="settings-title-privacy">
-          <div className="settings-card-head"><div><h2 id="settings-title-privacy" tabIndex={-1}>Privacy</h2><p>Virelo Web runs entirely in your browser.</p></div></div>
+          <div className="settings-card-head"><div><h2 id="settings-title-privacy" tabIndex={-1}>{t("Privacy")}</h2><p>{t("Virelo Web runs entirely in your browser.")}</p></div></div>
           <div className="privacy-facts">
-            <div><ShieldCheck/><span><strong>No file uploads</strong><small>Video data stays on this device.</small></span></div>
-            <div><HardDrives/><span><strong>Local browser index</strong><small>Titles, thumbnails, favorites and progress are stored in IndexedDB.</small></span></div>
-            <div><WarningCircle/><span><strong>You control access</strong><small>Remove a library at any time or revoke site permissions in your browser.</small></span></div>
+            <div><ShieldCheck/><span><strong>{t("No file uploads")}</strong><small>{t("Video data stays on this device.")}</small></span></div>
+            <div><HardDrives/><span><strong>{t("Local browser index")}</strong><small>{t("Titles, thumbnails, favorites and progress are stored in IndexedDB.")}</small></span></div>
+            <div><WarningCircle/><span><strong>{t("You control access")}</strong><small>{t("Remove a library at any time or revoke site permissions in your browser.")}</small></span></div>
           </div>
         </section>}
       </div>
     </div>
-    <footer className="settings-legal" aria-label="Virelo licensing">
-      <span>Copyright (c) 2026 Virelo contributors. No warranty.</span>
-      <nav aria-label="Source and license"><a href="https://github.com/VireloHQ/Virelo-Web" target="_blank" rel="noreferrer">Source code</a><a href="/LICENSE.txt" target="_blank" rel="noreferrer">AGPL-3.0-only</a></nav>
+    <footer className="settings-legal" aria-label={t("Virelo licensing")}>
+      <span>{t("Copyright (c) 2026 Virelo contributors. No warranty.")}</span>
+      <nav aria-label={t("Source and license")}><a href="https://github.com/VireloHQ/Virelo-Web" target="_blank" rel="noreferrer">{t("Source code")}</a><a href="/LICENSE.txt" target="_blank" rel="noreferrer">{t("AGPL-3.0-only")}</a></nav>
     </footer>
   </div>;
 }
