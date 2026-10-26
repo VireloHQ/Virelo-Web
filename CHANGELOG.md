@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add rounded share QR modules/finder corners, a centered Virelo logo and a self-contained PNG download. Move sharing out of the header into labelled video actions and Sharing settings; enlarge remaining header icons to 28px with 48px touch targets.
+
 - Add a locally generated app link/QR in the header without transferring local videos, playlists or file handles. Lazy-load the QR generator and include its MIT notice.
 - Add opt-in live volume leveling for normal videos, Shorts and selected audio. Save the device preference, bound gain, ignore silence, preserve manual volume/mute and avoid pre-scanning, rewriting or uploading files. Describe this as live stereo leveling, not whole-file integrated LUFS normalization.
 

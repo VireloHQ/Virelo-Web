@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { Button, Input } from '@heroui/react';
 import { MagnifyingGlass, Gear, X } from '@phosphor-icons/react';
 import { useUIStore } from '../store';
-import { ShareButton } from './ShareButton';
 
 export function Header() {
   const navigate = useNavigate();
@@ -48,7 +47,6 @@ export function Header() {
           <Link to="/app/playlists" activeProps={{className:'active'}}>Playlists</Link>
         </nav>
         <div className="topbar-actions">
-          <ShareButton webOnly/>
           <div className={`header-search-shell ${searchOpen ? 'open' : ''}`} data-animate={animateSearch}
             onKeyDownCapture={event=>{
               if(event.key==='Escape'&&searchOpen){

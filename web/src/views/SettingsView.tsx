@@ -10,12 +10,15 @@ import { SettingsNavigation } from '../components/SettingsNavigation';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
 import { QueueLayoutSetting } from '../components/QueueLayoutSetting';
 import { VolumeLevelingSetting } from '../components/VolumeLevelingSetting';
+import { SharingSettings } from '../components/ShareButton';
+import { QrCode } from '@phosphor-icons/react';
 import type { QueueBehavior, Settings } from '../types';
 
 const settingsSections = [
   { id:'libraries', label:'Libraries', description:'Folders and browser access', icon:Folders },
   { id:'metadata', label:'Metadata', description:'Titles and artwork', icon:ImageSquare },
   { id:'playback', label:'Playback', description:'What plays next', icon:PlayCircle },
+  { id:'sharing', label:'Sharing', description:'App links and QR codes', icon:QrCode },
   { id:'shorts', label:'Shorts', description:'Videos in your vertical feed', icon:DeviceMobile },
   { id:'privacy', label:'Privacy', description:'Your files stay on your device', icon:ShieldCheck }
 ] as const;
@@ -85,6 +88,7 @@ export function SettingsView() {
 
       <div className="settings-content">
         <button type="button" className="settings-back" onClick={closeSection}><ArrowLeft aria-hidden="true"/> All settings</button>
+        {activeSection === 'sharing' && <SharingSettings webOnly/>}
         {activeSection === 'libraries' && <section id="settings-panel-libraries" className="settings-card settings-section" aria-labelledby="settings-title-libraries">
           <div className="settings-card-head">
             <div><h2 id="settings-title-libraries" tabIndex={-1}>Libraries</h2><p>Choose folders that Virelo can read in this browser.</p></div>
