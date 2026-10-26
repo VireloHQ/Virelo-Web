@@ -11,8 +11,6 @@
 .communication-download { margin-right:auto; align-self:center; text-decoration:underline; text-underline-offset:4px; }
 .notification-badge { position:absolute; right:1px; top:1px; min-width:18px; padding:0 4px; line-height:18px; border-radius:10px; background:var(--color-brand,#ae93ff); color:#120e1a; font-size:11px; font-weight:700; }
 .notification-list { display:grid; gap:0; }
-.playback-leveling { border-bottom:1px solid #49434f; margin-bottom:8px; padding-bottom:12px; }
-.playback-leveling p { padding:6px 10px 0; margin:0; font-size:12px; line-height:1.5; color:#c2bec6; }
 .notification-item { padding:18px 0; border-bottom:1px solid #39363e; }
 .notification-item:first-child { padding-top:0; }
 .notification-item h3 { color:#f5f5f7; font-size:16px; margin:0; overflow-wrap:anywhere; }

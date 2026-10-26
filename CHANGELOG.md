@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Align the Audio menu toggle with other player controls and remove redundant implementation commentary from routine interface messages.
+
 - Localize the player and settings into English, Japanese, Simplified Chinese, Korean and Russian. Share language preferences and catalogs with the landing/setup pages, preserve playback on changes, and add translation completeness checks.
 
 - Center the checkmark inside accent-color swatches without changing their colors or 44px hit targets.

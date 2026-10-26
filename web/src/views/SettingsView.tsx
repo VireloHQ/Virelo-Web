@@ -148,7 +148,7 @@ export function SettingsView() {
           <div className="settings-card-head"><div><h2 id="settings-title-privacy" tabIndex={-1}>{t("Privacy")}</h2><p>{t("Virelo Web runs entirely in your browser.")}</p></div></div>
           <div className="privacy-facts">
             <div><ShieldCheck/><span><strong>{t("No file uploads")}</strong><small>{t("Video data stays on this device.")}</small></span></div>
-            <div><HardDrives/><span><strong>{t("Local browser index")}</strong><small>{t("Titles, thumbnails, favorites and progress are stored in IndexedDB.")}</small></span></div>
+            <div><HardDrives/><span><strong>{t("Browser storage")}</strong><small>{t("Saved in this browser.")}</small></span></div>
             <div><WarningCircle/><span><strong>{t("You control access")}</strong><small>{t("Remove a library at any time or revoke site permissions in your browser.")}</small></span></div>
           </div>
         </section>}
