@@ -12,6 +12,8 @@ Video files are read through browser file APIs. They are not copied to Virelo, u
 
 ## Features
 
+- Share the app through a locally generated link/QR. This opens Virelo on another device; it does not transfer local videos, folders, playlists or permissions.
+- Optional **Settings → Playback → Volume leveling**, also available in the player's Audio menu, smooths loudness differences live. It is off by default, saved on this device and shared by normal videos, Shorts and selected tracks. Manual volume/mute still apply. No pre-scan, file changes or uploads are required. This is a bounded live stereo estimate, not full-file integrated LUFS or guaranteed true-peak normalization; browser audio processing support is required.
 - Folder selection with the File System Access API and a compatible folder-input fallback.
 - Local indexing, thumbnails, favorites, settings, and progress stored in IndexedDB.
 - Named playlists stored in the same browser, with ordered playback, shuffle, queue saving, drag/keyboard sorting and confirmed deletion. Removing a playlist never changes source files, favorites or watch history.
@@ -26,6 +28,10 @@ Video files are read through browser file APIs. They are not copied to Virelo, u
 - No accounts, analytics, advertising, metadata providers, or file uploads.
 
 ## Browser behavior
+
+Live volume leveling is disabled on Safari/iOS WebKit to avoid native-HLS
+audio-routing problems. Original playback remains available. The implementation
+does not claim full-file EBU R128 or true-peak mastering conformance.
 
 The public landing page and setup guide support English, Japanese, Korean and Simplified Chinese. They initially follow the browser's preferred supported language, with English as the fallback. Use the globe button in the header to switch languages; the choice is saved locally and shared across the public pages and tabs. If browser storage is blocked, the choice is retained for the current session. Player/library controls and the recorded demo remain in their existing language.
 

@@ -10,6 +10,13 @@ The original video files remain in their existing folders. Playback uses tempora
 
 ## Network behavior
 
+Share links and QR codes are generated locally, without an external QR service.
+They open the app only; local media, playlist IDs and file handles are not included.
+Optional live volume leveling processes decoded audio on this device and stores
+only its on/off preference in localStorage. Samples and measurements are not
+uploaded or persisted, and original files are not modified. The browser-only app
+has no administrator inbox or developer-originated notification feed.
+
 Named playlists, their titles and video references are also stored in IndexedDB
 for this browser and site origin. They are not shared or synced to another device.
 Deleting a playlist does not affect source videos, favorites or watch history.
