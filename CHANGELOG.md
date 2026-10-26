@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Center the checkmark inside accent-color swatches without changing their colors or 44px hit targets.
+
 - Add Appearance settings with four original controller layouts and preset/custom accent colors. Save preferences locally in this browser without adding accounts or uploading files. Preserve playback state, mobile controls and keyboard access.
 
 - Inset settings-navigation keyboard-focus outlines to the row so they align with the selected highlight without an extra outer border.
