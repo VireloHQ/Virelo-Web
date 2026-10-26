@@ -44,19 +44,19 @@
     "@fontsource-variable/inter": "5.3.0",
     "@heroui/react": "^3.2.6",
     "@heroui/styles": "^3.2.2",
-    "@mediabunny/aac-encoder": "^1.61.4",
-    "@mediabunny/ac3": "^1.61.4",
+    "@mediabunny/aac-encoder": "^1.62.1",
+    "@mediabunny/ac3": "^1.62.1",
     "@phosphor-icons/react": "^2.1.10",
-    "@tanstack/react-query": "^5.104.2",
-    "@tanstack/react-router": "^1.170.44",
+    "@tanstack/react-query": "^5.104.5",
+    "@tanstack/react-router": "^1.170.46",
     "matroska-subtitles": "^3.3.2",
-    "mediabunny": "^1.61.4",
+    "mediabunny": "^1.62.1",
     "qrcode-generator": "2.0.4",
-    "react": "^19.3.0",
+    "react": "^19.3.1",
     "react-aria": "^3.53.1",
     "react-aria-components": "^1.22.1",
-    "react-dom": "^19.3.0",
-    "zustand": "^5.0.15"
+    "react-dom": "^19.3.1",
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -65,6 +65,6 @@
     "@vitejs/plugin-react": "^6.1.2",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
-    "vite": "^8.3.4"
+    "vite": "^8.3.5"
   }
 }
