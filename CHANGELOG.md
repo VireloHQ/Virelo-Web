@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Animate pointer-driven settings selection with a shared moving highlight and a short, position-stable panel fade; keep keyboard and reduced-motion navigation immediate. Add share/playlist action icons, align video action heights, and shorten nonessential helper copy.
+
+- Restore the startup splash with a brief visible logo/wordmark hold before the shared fade. Start timing only when the screen is visible, wait briefly for the logo without blocking startup indefinitely, and honor reduced motion.
+
 - Align the settings selection rail with the full highlighted row and use neutral selected and keyboard-focus states consistently with the npm app.
 
 - Leave the share-QR logo and its surrounding central area free of QR modules, including transparent parts of the logo, in both the preview and PNG download.
