@@ -1,4 +1,4 @@
-import { createContext, useContext, useLayoutEffect, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import { appearanceVariables, DEFAULT_APPEARANCE, normalizeAppearance, type Appearance } from '../utils/appearance';
@@ -12,8 +12,20 @@ const AppearanceContext = createContext({
 export const useAppearance = () => useContext(AppearanceContext);
 export function AppearanceProvider({ children }: { children: ReactNode }) {
   const client = useQueryClient();
-  const query = useQuery({ queryKey: ['appearance'], queryFn: async () => normalizeAppearance(await api.appearance()), refetchOnWindowFocus: true });
-  const mutation = useMutation({ mutationFn: api.saveAppearance, onSuccess: value => client.setQueryData(['appearance'], normalizeAppearance(value)) });
+  const query = useQuery({ queryKey: ['appearance'], queryFn: async () => normalizeAppearance(await api.appearance()), refetchOnWindowFocus: 'always' });
+  const mutation = useMutation({ mutationFn: api.saveAppearance, onSuccess: async value => {
+    await client.cancelQueries({queryKey:['appearance']});
+    client.setQueryData(['appearance'], normalizeAppearance(value));
+  } });
+  useEffect(() => {
+    const storage = (event: StorageEvent) => {
+      try { if (event.storageArea && event.storageArea !== localStorage) return; } catch { return; }
+      if (event.key === 'virelo.appearance.v1' || event.key === null)
+        void client.cancelQueries({queryKey:['appearance']}).then(() => client.invalidateQueries({queryKey:['appearance']}));
+    };
+    window.addEventListener('storage', storage);
+    return () => window.removeEventListener('storage', storage);
+  }, [client]);
   const value = query.data ?? DEFAULT_APPEARANCE;
   useLayoutEffect(() => {
     const style = document.documentElement.style, variables = appearanceVariables(value.accentColor);
