@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Keep Shorts action labels compact and aligned across languages; prevent the volume popup from closing and reopening on a trigger click.
 - Configure Cloudflare Workers static assets and branch previews while preserving route-specific rewrites, security headers and missing-asset 404 responses.
 - Lock browser regression tooling alongside application dependencies to keep CI installations reproducible.
 - Prevent stale appearance reads and cross-tab preference changes from overwriting newer choices; handle unavailable storage, corrupt language preferences and invalid durations safely.
