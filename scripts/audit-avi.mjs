@@ -54,17 +54,23 @@ try{
   if(!process.env.VIRELO_TEST_AVI_BASE_URL)await context.route(url=>url.origin===origin,async route=>{const response=await route.fetch();await route.fulfill({response,headers:{...response.headers(),'content-security-policy':csp,'cross-origin-opener-policy':'same-origin'}});});
   await page.route('**/__avi-fixture/*',route=>{const item=fixtures.find(item=>String(item.id)===new URL(route.request().url()).pathname.split('/').at(-1));return route.fulfill({body:item.bytes,contentType:item.name.endsWith('.mp4')?'video/mp4':'video/x-msvideo'});});
   await page.goto(base+'/app/settings');await page.locator('.settings-heading').waitFor();
-  await page.evaluate(async items=>{
+  const catalog=await page.evaluate(async items=>{
    const root=await navigator.storage.getDirectory();
    for(const item of items){const handle=await root.getFileHandle(item.name,{create:true}),writer=await handle.createWritable();await writer.write(await(await fetch('/__avi-fixture/'+item.id)).blob());await writer.close();item.mtime=(await handle.getFile()).lastModified;}
    const db=await new Promise((resolve,reject)=>{const req=indexedDB.open('virelo-web');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});
-   await new Promise((resolve,reject)=>{const tx=db.transaction(['libraries','media'],'readwrite');tx.objectStore('libraries').put({id:1,path:'avi-audit',label:'AVI audit',created_at:1,persistent:true,handle:root});for(const item of items)tx.objectStore('media').put({id:item.id,library_id:1,path:item.name,source_path:item.name,filename:item.name,title:item.name,sort_title:item.name,kind:'movie',duration:null,width:null,height:null,video_codec:null,audio_codec:null,container:item.name.split('.').at(-1),folder:'',size:item.size,mtime:item.mtime,thumbnail_path:null,poster_path:null,backdrop_path:null,overview:null,genres:null,external_id:null,added_at:1,updated_at:1});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});db.close();
+   const media=items.map(item=>({id:item.id,library_id:1,path:item.name,source_path:item.name,filename:item.name,title:item.name,sort_title:item.name,kind:'movie',duration:null,width:null,height:null,video_codec:null,audio_codec:null,container:item.name.split('.').at(-1),folder:'',size:item.size,mtime:item.mtime,thumbnail_path:null,poster_path:null,backdrop_path:null,overview:null,genres:null,external_id:null,added_at:1,updated_at:1}));
+   // Keep AVI thumbnails out of the native-playback check; they legitimately need the decoder.
+   await new Promise((resolve,reject)=>{const tx=db.transaction(['libraries','media'],'readwrite');tx.objectStore('libraries').put({id:1,path:'avi-audit',label:'AVI audit',created_at:1,persistent:true,handle:root});tx.objectStore('media').put(media.find(item=>item.id===6));tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});db.close();return media;
   },fixtures.map(item=>({id:item.id,name:item.name,size:item.bytes.length,mtime:1})));
   const player=page.locator('.player:not(.short-player)'),video=player.locator('video');
   const ready=async()=>{await page.waitForFunction(()=>{const v=document.querySelector('.player video');return document.querySelector('.player-status.error')||(v&&v.readyState>=2&&!v.paused&&v.currentTime>.2);});assert.equal(await player.locator('.player-status.error').count(),0,await player.innerText());};
   const pause=async()=>{if(!await video.evaluate(v=>v.paused))await player.getByRole('button',{name:'Pause',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.player video').paused);};
   await page.goto(base+'/app/watch/6');await ready();
   check(codecRequests.length===0,width+' native MP4 does not load the AVI engine');
+  await page.evaluate(async media=>{
+   const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('virelo-web');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
+   await new Promise((resolve,reject)=>{const tx=db.transaction('media','readwrite');for(const item of media)tx.objectStore('media').put(item);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});db.close();
+  },catalog);
   await page.goto(base+'/app/watch/1');await ready();await pause();
   check(await video.evaluate(v=>v.videoWidth===960&&v.videoHeight===540&&v.duration>39&&v.duration<40.2),width+' Xvid video and both MP3 tracks are read at original resolution');
   check(await player.locator('.player-status.error').count()===0,width+' AVI never leaves a native unsupported-format error');
