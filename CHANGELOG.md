@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Configure Cloudflare Workers static assets and branch previews while preserving route-specific rewrites, security headers and missing-asset 404 responses.
+- Lock browser regression tooling alongside application dependencies to keep CI installations reproducible.
+- Prevent stale appearance reads and cross-tab preference changes from overwriting newer choices; handle unavailable storage, corrupt language preferences and invalid durations safely.
+- Load only the HeroUI component styles used by the interface, retaining its accessible controls, shared foundations and bundled font notices.
+
 - Stabilize browser regression fixtures for playback continuity and background media work; keep language selection and connection recovery usable in short windows.
 
 - Align the Audio menu toggle with other player controls and remove redundant implementation commentary from routine interface messages.
