@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Configure Cloudflare Workers static assets and branch previews while preserving route-specific rewrites, security headers and missing-asset 404 responses.
 - Prevent stale appearance reads and cross-tab preference changes from overwriting newer choices; handle unavailable storage, corrupt language preferences and invalid durations safely.
 - Load only the HeroUI component styles used by the interface, retaining its accessible controls, shared foundations and bundled font notices.
 
