@@ -6,6 +6,7 @@ import { MobileNav } from './components/MobileNav';
 import { NotFoundView } from './views/NotFoundView';
 import type { SortKey } from './types';
 import { validateShortsSearch } from './utils/shorts-navigation';
+import { useScanRefresh } from './hooks/useScanRefresh';
 
 const LandingRouteView = createRouteView(() => import('./views/LandingView'), 'LandingView', 'landing');
 const SetupGuideRouteView = createRouteView(() => import('./views/SetupGuideView'), 'SetupGuideView', 'setup');
@@ -57,6 +58,7 @@ function validateWatchSearch(input: Record<string, unknown>): WatchRouteSearch {
 }
 
 function Shell() {
+  useScanRefresh();
   return <AppearanceProvider><div className="app-shell"><Header /><main className="page-shell"><Outlet /></main><MobileNav /></div></AppearanceProvider>;
 }
 

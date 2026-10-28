@@ -390,6 +390,7 @@ async function scanLibrary(library: StoredLibrary, allowPermissionRequest: boole
       await writeStore('media', item);
       await writeStore('thumbnails', { id, blob: probe.thumbnail, version: THUMBNAIL_VERSION, size: file.size, mtime: file.lastModified });
       releaseMediaUrls(id);
+      window.dispatchEvent(new CustomEvent('virelo-thumbnail-updated', { detail: { id, url: await localThumbnailUrl(id) } }));
       if (previous) scanStatus.updated++; else scanStatus.added++;
     } catch {
       scanStatus.errors++;
