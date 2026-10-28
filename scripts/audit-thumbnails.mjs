@@ -36,7 +36,7 @@ try {
     const apiModule=await(await fetch('/src/api.ts')).text();
     const libraryPath=apiModule.match(/from\s+["']([^"']*local-library[^"']*)["']/)?.[1]||'/src/local-library.ts';
     const library = await import(libraryPath);
-    const { validThumbnail, probeVideo } = await import('/src/utils/video-thumbnail.ts');
+    const { validThumbnail, probeVideo, THUMBNAIL_VERSION } = await import('/src/utils/video-thumbnail.ts');
     const files = await Promise.all(names.map(async name => new File([await (await fetch('/__thumbnail/'+name)).blob()],name,{lastModified:100})));
     const directory = {name:'Synthetic thumbnails',kind:'directory',queryPermission:async()=> 'granted',requestPermission:async()=> 'granted',async *values(){for(const file of files)yield {name:file.name,kind:'file',getFile:async()=>file};}};
     window.showDirectoryPicker = async () => directory;
@@ -47,13 +47,14 @@ try {
     window.__writeThumbnail = record => new Promise((resolve,reject)=>{const tx=db.transaction('thumbnails','readwrite');tx.objectStore('thumbnails').put(record);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
     window.__deleteThumbnail = id => new Promise((resolve,reject)=>{const tx=db.transaction('thumbnails','readwrite');tx.objectStore('thumbnails').delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
     window.__library = library;
+    window.__files = files;
     const results = [];
     for(const item of items){const thumbnail=await window.__readThumbnail(item.id);results.push({name:item.filename,width:item.width,height:item.height,duration:item.duration,valid:!!thumbnail?.blob&&await validThumbnail(thumbnail.blob),version:thumbnail?.version});}
     const black=document.createElement('canvas');black.width=320;black.height=180;black.getContext('2d').fillRect(0,0,320,180);window.__black=await new Promise(r=>black.toBlob(r,'image/jpeg'));
     const invalid=await probeVideo(new File(['not a video'],'invalid.mp4'));
-    return {results,invalid,blackAccepted:await validThumbnail(window.__black)};
+    return {results,invalid,thumbnailVersion:THUMBNAIL_VERSION,blackAccepted:await validThumbnail(window.__black)};
   },names);
-  for(const result of seeded.results){check(result.valid&&result.version===2,'actual decoded thumbnail '+result.name);}
+  for(const result of seeded.results){check(result.valid&&result.version===seeded.thumbnailVersion,'actual decoded thumbnail '+result.name);}
   check(seeded.results.find(x=>x.name==='portrait.mp4').height>seeded.results.find(x=>x.name==='portrait.mp4').width,'portrait dimensions');
   check(seeded.results.find(x=>x.name==='tiny.webm').duration<0.2,'sub-200ms clips generate artwork');
   check(!seeded.blackAccepted,'black legacy canvases are rejected');
@@ -71,8 +72,14 @@ try {
   check(true,'visible Home cards recover missing/black thumbnails without rescan');
   const restored=await page.evaluate(async()=>{
     const {validThumbnail}=await import('/src/utils/video-thumbnail.ts');
-    const items=await window.__library.listStoredMedia();
-    return Promise.all(items.map(async item=>({valid:await validThumbnail((await window.__readThumbnail(item.id)).blob),preserved:item.liked===1&&item.progress_position===41&&item.metadata_blocked===1})));
+    const deadline=Date.now()+10000;
+    while(Date.now()<deadline){
+      const items=await window.__library.listStoredMedia();
+      const results=await Promise.all(items.map(async item=>{const thumbnail=await window.__readThumbnail(item.id);return {valid:!!thumbnail?.blob&&await validThumbnail(thumbnail.blob),preserved:item.liked===1&&item.progress_position===41&&item.metadata_blocked===1};}));
+      if(results.length&&results.every(result=>result.valid))return results;
+      await new Promise(resolve=>setTimeout(resolve,30));
+    }
+    throw new Error('Visible thumbnail repairs were not persisted');
   });
   check(restored.every(x=>x.valid),'repairs are persisted in IndexedDB');
   check(restored.every(x=>x.preserved),'favorites, watch progress and metadata are preserved');
@@ -84,6 +91,24 @@ try {
     const {validThumbnail}=await import('/src/utils/video-thumbnail.ts');return validThumbnail((await window.__readThumbnail(item.id)).blob);
   });
   check(updated,'unchanged files no longer skip failed thumbnail recovery');
+  await page.getByRole('link',{name:'Library',exact:true}).first().click();
+  await page.locator('.media-card').first().waitFor();
+  const added=await page.evaluate(async()=>{
+    const file=new File([window.__files[0]],'new-arrival.mp4',{lastModified:200});
+    window.__files.push(file);
+    const previous=window.__library.getLocalScanStatus().finishedAt;
+    await window.__library.startLocalScan();
+    while(window.__library.getLocalScanStatus().running||window.__library.getLocalScanStatus().finishedAt===previous)await new Promise(resolve=>setTimeout(resolve,30));
+    const item=(await window.__library.listStoredMedia()).find(item=>item.filename===file.name);
+    return {id:item.id,event:window.__thumbnailEvents.some(event=>event.id===item.id&&event.url)};
+  });
+  check(added.event,'new files publish their generated thumbnail after the scan commits');
+  const newCard=page.locator('.media-card').filter({hasText:'new-arrival'});
+  await newCard.waitFor();
+  await newCard.scrollIntoViewIfNeeded();
+  await page.waitForFunction(()=>[...document.querySelectorAll('.media-card')].some(card=>card.textContent.includes('new-arrival')&&card.querySelector('img')?.naturalWidth>1));
+  check(true,'an already-open Library displays a new video and its thumbnail without navigation or reload');
+  await page.getByRole('link',{name:'Home',exact:true}).first().click();
   await page.screenshot({path:join(folder,'home.png')});
   const watchId=await page.evaluate(async()=>{
     const item=(await window.__library.listStoredMedia()).find(item=>item.filename==='intro.mp4');
