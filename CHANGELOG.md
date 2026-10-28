@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Save personal appearance preferences automatically and keep administrator Save actions scoped to their own settings section.
+
 - Keep Shorts action labels compact and aligned across languages; prevent the volume popup from closing and reopening on a trigger click.
 - Configure Cloudflare Workers static assets and branch previews while preserving route-specific rewrites, security headers and missing-asset 404 responses.
 - Lock browser regression tooling alongside application dependencies to keep CI installations reproducible.

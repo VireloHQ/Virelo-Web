@@ -1,7 +1,7 @@
 import { Trans } from '../i18n/Trans';
 import { t, useLocale } from '../i18n';
 import { PageSkeleton } from '../components/PageSkeleton';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Switch } from '@heroui/react';
 import { ArrowLeft, ArrowsClockwise, CheckCircle, DeviceMobile, FolderPlus, Folders, HardDrives, ImageSquare, PlayCircle, ShieldCheck, Trash, WarningCircle } from '@phosphor-icons/react';
@@ -16,7 +16,7 @@ import { Palette } from '@phosphor-icons/react';
 import { VolumeLevelingSetting } from '../components/VolumeLevelingSetting';
 import { SharingSettings } from '../components/ShareButton';
 import { QrCode } from '@phosphor-icons/react';
-import type { QueueBehavior, Settings } from '../types';
+import type { QueueBehavior } from '../types';
 
 const settingsSections = [
   { id:'libraries', label:'Libraries', description:'Folders and browser access', icon:Folders },
@@ -43,7 +43,7 @@ export function SettingsView() {
   const libraries = useQuery({ queryKey:['libraries'], queryFn:api.libraries });
   const capabilities = useQuery({ queryKey:['capabilities'], queryFn:api.capabilities });
   const scan = useQuery({ queryKey:['scan'], queryFn:api.scanStatus, refetchInterval:(query)=>query.state.data?.running ? 400 : 2_000 });
-  const [form, setForm] = useState<Settings | null>(null);
+  const form = settingsQuery.data;
   const [activeSection, setActiveSection] = useState<SettingsSectionId>('libraries');
   const [mobileDetail,setMobileDetail]=useState(false);
   const openSection=(id:string)=>{
@@ -56,8 +56,6 @@ export function SettingsView() {
     window.requestAnimationFrame(()=>document.getElementById(`settings-nav-${activeSection}`)?.focus());
   };
 
-  useEffect(() => { if (settingsQuery.data && !form) setForm(settingsQuery.data); }, [settingsQuery.data, form]);
-
   const invalidateLibrary = async () => {
     await Promise.all([
       client.invalidateQueries({ queryKey:['libraries'] }),
@@ -69,7 +67,7 @@ export function SettingsView() {
       client.invalidateQueries({ queryKey:['scan'] })
     ]);
   };
-  const save = useMutation({ mutationFn:()=>api.saveSettings(form!), onSuccess:(data)=>{ setForm(data); client.setQueryData(['settings'], data); void client.invalidateQueries({ queryKey:['shorts'] }); } });
+  const save = useMutation({ scope:{id:'settings'}, mutationFn:api.saveSettings, onSuccess:(data)=>{ client.setQueryData(['settings'], data); void client.invalidateQueries({ queryKey:['shorts'] }); } });
   const add = useMutation({ mutationFn:api.addLibrary, onSuccess:invalidateLibrary });
   const reconnect = useMutation({ mutationFn:(id:number)=>api.reconnectLibrary(id), onSuccess:invalidateLibrary });
   const libraryError=[add.error,reconnect.error].find(error=>error&&error.name!=='AbortError');
@@ -77,8 +75,6 @@ export function SettingsView() {
   const clearMetadata = useMutation({mutationFn:api.clearAllMetadata,onSuccess:()=>client.invalidateQueries({predicate:(query)=>['home','media','related','shorts','watch-queue','queue','search'].includes(String(query.queryKey[0]))})});
 
   if (!form) return <PageSkeleton kind="settings" />;
-  const hasChanges = JSON.stringify(form) !== JSON.stringify(settingsQuery.data);
-
   const startScan = async () => {
     await api.startScan();
     await client.invalidateQueries({ queryKey:['scan'] });
@@ -86,8 +82,8 @@ export function SettingsView() {
   };
 
   return <div className={`content-view settings-view${mobileDetail?' settings-detail-open':''}`}>
-    <header className="settings-heading"><h1>{t("Settings")}</h1><div className="settings-heading-actions"><span aria-live="polite">{save.isSuccess && !hasChanges && <span className="settings-saved"><CheckCircle/> {t("Saved")}</span>}</span><Button isPending={save.isPending} isDisabled={!hasChanges} onPress={()=>save.mutate()}>{t("Save settings")}</Button></div></header>
-    {save.error && <p className="error-copy settings-save-error">{t(save.error.message)}</p>}
+    <header className="settings-heading"><h1>{t("Settings")}</h1></header>
+    {save.error && <div className="settings-save-error"><p className="error-copy" role="alert">{t(save.error.message)}</p><Button variant="secondary" onPress={()=>save.mutate(save.variables!)}>{t("Try again")}</Button></div>}
 
     <div className="settings-layout">
       <SettingsNavigation sections={settingsSections} activeSection={activeSection} detailOpen={mobileDetail} onSelect={openSection}/>
@@ -136,12 +132,12 @@ export function SettingsView() {
           <QueueLayoutSetting/>
           <VolumeLevelingSetting/>
           <div className="setting-row"><div className="setting-copy"><div><strong>{t("Queue advance")}</strong><p>{t("Auto-advance, loop, or manually step through the folder.")}</p></div></div>
-            <Select className="settings-picker" label={t("Queue advance")} value={form.queueBehavior} options={QUEUE_OPTIONS.map(option=>({...option,label:t(option.label)}))} align="end" onChange={(value)=>setForm({...form, queueBehavior:value as QueueBehavior})}/></div>
+            <Select className="settings-picker" label={t("Queue advance")} value={save.isPending&&save.variables.queueBehavior?save.variables.queueBehavior:form.queueBehavior} options={QUEUE_OPTIONS.map(option=>({...option,label:t(option.label)}))} align="end" onChange={(value)=>save.mutate({queueBehavior:value as QueueBehavior})}/></div>
         </section>}
 
         {activeSection === 'shorts' && <section id="settings-panel-shorts" className="settings-card settings-section" aria-labelledby="settings-title-shorts">
           <div className="settings-card-head"><div><h2 id="settings-title-shorts" tabIndex={-1}>{t("Shorts")}</h2><p>{t("Choose which local videos appear in the vertical feed.")}</p></div></div>
-          <SettingSwitch checked={form.shortsIncludeLandscapes} onChange={(value)=>setForm({...form, shortsIncludeLandscapes:value})} title={t("Include landscape videos")} description={t("Fit landscape videos by width in the Shorts player.")}/>
+          <SettingSwitch checked={save.isPending&&save.variables.shortsIncludeLandscapes!==undefined?save.variables.shortsIncludeLandscapes:form.shortsIncludeLandscapes} onChange={(value)=>save.mutate({shortsIncludeLandscapes:value})} title={t("Include landscape videos")} description={t("Fit landscape videos by width in the Shorts player.")}/>
         </section>}
 
         {activeSection === 'privacy' && <section id="settings-panel-privacy" className="settings-card settings-section compact-card" aria-labelledby="settings-title-privacy">
