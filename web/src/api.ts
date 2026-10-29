@@ -2,6 +2,7 @@ import type { Appearance } from './utils/appearance';
 import { readAppearance, writeAppearance } from './utils/appearance-storage';
 import {
   addLocalLibrary,
+  renameLocalLibrary,
   browserCapabilities,
   clearLocalMetadata,
   clearAllLocalMetadata,
@@ -101,6 +102,7 @@ export const api = {
   },
   libraries: listLocalLibraries,
   addLibrary: addLocalLibrary,
+  renameLibrary: renameLocalLibrary,
   reconnectLibrary: reconnectLocalLibrary,
   removeLibrary: async (id: number) => { await removeLocalLibrary(id); return { ok: true }; },
   settings: readSettings,

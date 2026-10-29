@@ -1,5 +1,6 @@
 import type { BrowserCapabilities, Library, MediaItem, ScanStatus, Settings } from './types';
 import { probeVideo, THUMBNAIL_VERSION, validThumbnail } from './utils/video-thumbnail';
+import { libraryName, libraryFolder } from './utils/library-names';
 
 const DB_NAME = 'virelo-web';
 const DB_VERSION = 2;
@@ -18,6 +19,7 @@ interface StoredLibrary {
   created_at: number;
   persistent: boolean;
   handle?: FileSystemDirectoryHandle;
+  folderLabels?: Record<string,string>;
 }
 
 interface StoredMedia extends MediaItem {
@@ -245,7 +247,7 @@ export async function reconnectLocalLibrary(id: number): Promise<Library> {
       if(!current)throw new Error('Library not found.');
       const duplicate=await matchingLibrary(libraries,handle.name,handle,id);
       if(duplicate)throw new Error(`This folder is already registered as "${duplicate.label}". Reconnect that library instead.`);
-      library=await storeHandle({...current,label:handle.name,path:handle.name},handle);
+      library=await storeHandle({...current,label:current.label===current.path?handle.name:current.label,path:handle.name},handle);
       knownLibraries.set(id, library);
       await runScan([id], true);
       return toLibrary(library, true);
@@ -258,12 +260,26 @@ export async function reconnectLocalLibrary(id: number): Promise<Library> {
     const libraries=await readAll<StoredLibrary>('libraries'),current=libraries.find(item=>item.id===id);
     if(!current)throw new Error('Library not found.');
     await matchingLibrary(libraries,label,undefined,id);
-    library = { ...current, label, path: label, persistent: false };
+    library = { ...current, label:current.label===current.path?label:current.label, path: label, persistent: false };
     await writeStore('libraries', library);
     sessionLibraries.set(id, files);
     knownLibraries.set(id, library);
     await runScan([id], true);
     return toLibrary(library, true);
+  });
+}
+
+export async function renameLocalLibrary(id:number, value:unknown, path:unknown=''):Promise<Library> {
+  const label=libraryName(value),folder=libraryFolder(path);
+  return editLibraries(async()=>{
+    const library=await readStore<StoredLibrary>('libraries',id);
+    if(!library)throw new Error('Library not found.');
+    if(folder&&!(await listStoredMedia()).some(item=>item.library_id===id&&(item.folder===folder||item.folder.startsWith(folder+'/'))))
+      throw new Error('Folder not found.');
+    const updated=folder?{...library,folderLabels:{...library.folderLabels,[folder]:label}}:{...library,label};
+    await writeStore('libraries',updated);
+    knownLibraries.set(id,updated);
+    return toLibrary(updated,await permissionState(updated)==='granted');
   });
 }
 
@@ -287,7 +303,7 @@ export async function listLocalLibraries(): Promise<Library[]> {
 }
 
 function toLibrary(library: StoredLibrary, connected: boolean): Library {
-  return { id: library.id, label: library.label, path: library.path, created_at: library.created_at, persistent: library.persistent, connected };
+  return { id: library.id, label: library.label, path: library.path, created_at: library.created_at, persistent: library.persistent, connected, folderLabels:library.folderLabels??{} };
 }
 
 export async function startLocalScan() {

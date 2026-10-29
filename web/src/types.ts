@@ -80,6 +80,7 @@ export interface Library {
   created_at: number;
   connected: boolean;
   persistent: boolean;
+  folderLabels?: Record<string,string>;
 }
 export interface Settings {
   shortsIncludeLandscapes: boolean;

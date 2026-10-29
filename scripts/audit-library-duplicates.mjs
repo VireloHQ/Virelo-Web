@@ -39,9 +39,11 @@ try {
     const first=await window.pick('A'),item=(await window.library.listStoredMedia())[0];
     await window.library.updateStoredMedia(item.id,row=>{row.liked=1;row.progress_position=12;row.progress_duration=60;});
     const playlist=await window.api.createPlaylist({name:'Keep this',mediaIds:[item.id]});
-    const again=await window.pick('A');return {id:first.id,again:again.id,itemId:item.id,playlistId:playlist.id};
+    await window.api.renameLibrary(first.id,'Custom media name');
+    const again=await window.pick('A');return {id:first.id,again:again.id,label:again.label,itemId:item.id,playlistId:playlist.id};
   });
   assert.equal(original.again,original.id);
+  assert.equal(original.label,'Custom media name','re-registering a handle preserves its display name');
   assert.equal((await page.evaluate(()=>window.library.listLocalLibraries())).length,1);
   const other=await page.evaluate(()=>window.pick('B'));assert.notEqual(other.id,original.id,'same names are allowed for distinct real directories');
   const state=await page.evaluate(async({itemId,playlistId})=>({item:(await window.library.listStoredMedia()).find(item=>item.id===itemId),playlist:await window.api.playlist(playlistId)}),original);
@@ -57,6 +59,7 @@ try {
   };
   const firstFallback=await fallback(page,'Fallback');assert.ok(firstFallback.library,JSON.stringify(firstFallback));
   const fallbackId=firstFallback.library.id;
+  await page.evaluate(id=>window.api.renameLibrary(id,'Custom fallback name'),fallbackId);
   assert.match((await fallback(page,'Fallback')).error,/already registered/);
   await writeFile(join(root,'Fallback','new.mp4'),clip);
   assert.match((await fallback(page,'Fallback')).error,/already registered/,'a changed selection does not evade the guard');
@@ -65,7 +68,9 @@ try {
   const duplicateReconnect=await page.evaluate(async id=>{const handle=await window.directory('A');window.showDirectoryPicker=async()=>handle;try{await window.library.reconnectLocalLibrary(id);return '';}catch(error){return error.message;}},fallbackId);
   assert.match(duplicateReconnect,/already registered/);
   assert.equal((await page.evaluate(()=>window.library.listLocalLibraries())).find(library=>library.id===fallbackId).path,'Fallback','failed reconnect leaves the original registration intact');
-  assert.equal((await fallback(page,'Fallback',fallbackId)).library.id,fallbackId);
+  const restoredFallback=(await fallback(page,'Fallback',fallbackId)).library;
+  assert.equal(restoredFallback.id,fallbackId);
+  assert.equal(restoredFallback.label,'Custom fallback name','reconnecting files preserves a custom display name');
   await page.reload();await initialize(page);
   assert.match((await fallback(page,'Fallback')).error,/already registered/,'fallback duplicate checks survive reload');
 
@@ -96,7 +101,7 @@ try {
   await page.waitForFunction(()=>window.cancelledPicker);
   await page.evaluate(()=>{window.showDirectoryPicker=undefined;});
   const chooser=page.waitForEvent('filechooser');
-  await page.locator('.library-list>div').filter({has:page.getByText('Fallback',{exact:true})}).getByRole('button',{name:'Reconnect',exact:true}).click();
+  await page.locator('.library-list>div').filter({has:page.getByText('Custom fallback name',{exact:true})}).getByRole('button',{name:'Reconnect',exact:true}).click();
   await(await chooser).setFiles(join(root,'OtherFallback'));
   await page.getByRole('alert').filter({hasText:'already registered'}).waitFor();
   const count=await page.evaluate(async id=>{await window.library.removeLocalLibrary(id);const a=await window.directory('A'),file=await(await a.getFileHandle('clip.mp4')).getFile();return file.size;},original.id);
