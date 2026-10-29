@@ -4,6 +4,8 @@ import { Button } from '@heroui/react';
 import { Check, Play } from '@phosphor-icons/react';
 import { useAppearance } from './AppearanceProvider';
 import { LanguageSettings } from './LanguageSettings';
+import { Select } from './Select';
+import { useLibraryLayout, type LibraryLayout } from '../hooks/useLibraryLayout';
 import { appearanceVariables, DEFAULT_APPEARANCE, isAppearance, type Appearance } from '../utils/appearance';
 
 const styles = [
@@ -18,6 +20,7 @@ const colors = [
 ] as const;
 export function AppearanceSettings() {
   useLocale();
+  const {layout,setLayout}=useLibraryLayout();
   const { value, loading, saving, error, saveError, save } = useAppearance();
   const [draft, setDraft] = useState<Appearance>(value), [saved, setSaved] = useState(false), [editingColor, setEditingColor] = useState(false);
   useEffect(() => { if (!saving && !saveError && !editingColor) setDraft(value); }, [value, saving, saveError, editingColor]);
@@ -31,6 +34,10 @@ export function AppearanceSettings() {
     <div className="settings-card-head"><div><h2 id="settings-title-appearance" tabIndex={-1}>{t("Appearance")}</h2><p>{t("Player controls and accent color.")}</p></div></div>
     {error && <p className="error-copy" role="alert">{t("Could not load appearance settings. Reload to try again.")}</p>}
     <LanguageSettings/>
+    <div className="setting-row"><div className="setting-copy"><strong>{t('Library view')}</strong></div>
+      <Select className="settings-picker" label={t('Library view')} value={layout} align="end" onChange={value=>setLayout(value as LibraryLayout)}
+        options={[{value:'grid',label:t('Grid view')},{value:'explorer',label:t('Explorer view')}]}/>
+    </div>
     <div className="appearance-form">
       <fieldset disabled={loading || Boolean(error)}>
         <legend>{t("Controller style")}</legend>
