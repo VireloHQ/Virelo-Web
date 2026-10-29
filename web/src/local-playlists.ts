@@ -1,6 +1,6 @@
 import { hydrateMediaIds, openDatabase } from './local-library';
 import { mergePlaylistIds, playlistIds, playlistName, playlistRevision, type PlaylistSummary, type PlaylistWrite, type StoredPlaylist } from './utils/playlist-values';
-import type { PlaylistDetail } from './types';
+import type { MediaItem, PlaylistDetail } from './types';
 
 async function snapshot(id?: number) {
   const db = await openDatabase();
@@ -12,21 +12,24 @@ async function snapshot(id?: number) {
     tx.onabort = () => reject(tx.error ?? new Error('Could not read playlists.'));
   }).finally(() => db.close());
 }
-function summary(row: StoredPlaylist, available: Set<number>): PlaylistSummary {
+const cover=(item?:MediaItem)=>item?{mediaId:item.id,url:item.thumbnail_path}:null;
+function summary(row: StoredPlaylist, available: Set<number>, image:PlaylistSummary['cover']=null): PlaylistSummary {
   const count = row.mediaIds.filter(id => available.has(id)).length;
   return { id: row.id, name: row.name, revision: row.revision, createdAt: row.createdAt, updatedAt: row.updatedAt,
-    itemCount: count, unavailableCount: row.mediaIds.length - count };
+    itemCount: count, unavailableCount: row.mediaIds.length - count, cover:image };
 }
 export async function listLocalPlaylists(): Promise<PlaylistSummary[]> {
   const { rows, available } = await snapshot();
-  return rows.sort((a, b) => b.updatedAt - a.updatedAt || b.id - a.id).map(row => summary(row, available));
+  const firstIds=rows.map(row=>row.mediaIds.find(id=>available.has(id)));
+  const images=new Map((await hydrateMediaIds([...new Set(firstIds.filter((id):id is number=>id!==undefined))])).map(item=>[item.id,cover(item)]));
+  return rows.sort((a, b) => b.updatedAt - a.updatedAt || b.id - a.id).map(row => summary(row, available,images.get(row.mediaIds.find(id=>available.has(id))!)??null));
 }
 export async function getLocalPlaylist(id: number): Promise<PlaylistDetail> {
   if (!Number.isSafeInteger(id) || id <= 0) throw new Error('Playlist not found.');
   const { rows: [row] } = await snapshot(id);
   if (!row) throw new Error('Playlist not found.');
   const items = await hydrateMediaIds(row.mediaIds);
-  return { ...summary(row, new Set(items.map(item => item.id))), items };
+  return { ...summary(row, new Set(items.map(item => item.id)),cover(items[0])), items };
 }
 
 async function mutate(id: number | undefined, body: { name?: string; mediaIds?: number[]; revision?: number; append?: boolean }, remove = false) {

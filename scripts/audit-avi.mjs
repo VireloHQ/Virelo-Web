@@ -51,7 +51,7 @@ try{
   page.on('console',message=>{if(message.type()==='error')console.log('BROWSER_ERROR',message.text());});
   page.on('request',request=>{const url=new URL(request.url());if(['http:','https:'].includes(url.protocol)&&url.origin!==origin)external.set(request,url.href);if(url.pathname.includes('/ffmpeg-0.12.10/'))codecRequests.push(url.pathname);});
   if(width<600&&!process.env.VIRELO_TEST_AVI_BASE_URL)await page.route('**/ffmpeg-core.wasm.gz',async route=>route.fulfill({body:await readFile(join(repo,'dist/assets/ffmpeg-0.12.10/ffmpeg-core.wasm.gz')),contentType:'application/gzip'}));
-  if(!process.env.VIRELO_TEST_AVI_BASE_URL)await context.route(url=>url.origin===origin,async route=>{const response=await route.fetch();await route.fulfill({response,headers:{...response.headers(),'content-security-policy':csp,'cross-origin-opener-policy':'same-origin'}});});
+  if(!process.env.VIRELO_TEST_AVI_BASE_URL)await context.route(url=>url.origin===origin,async route=>{const response=await route.fetch({maxRetries:2});await route.fulfill({response,headers:{...response.headers(),'content-security-policy':csp,'cross-origin-opener-policy':'same-origin'}});});
   await page.route('**/__avi-fixture/*',route=>{const item=fixtures.find(item=>String(item.id)===new URL(route.request().url()).pathname.split('/').at(-1));return route.fulfill({body:item.bytes,contentType:item.name.endsWith('.mp4')?'video/mp4':'video/x-msvideo'});});
   await page.goto(base+'/app/settings');await page.locator('.settings-heading').waitFor();
   const catalog=await page.evaluate(async items=>{
@@ -125,7 +125,7 @@ try{
   if(blockedScripts.length)console.log('INFO',width,'CSP blocked '+blockedScripts.length+' injected script loads before network transfer');
   check(workerPolicies.length>0&&workerPolicies.every(policy=>policy?.includes("'wasm-unsafe-eval'")&&!policy.includes("'unsafe-eval'")),width+' decoder workers run under the production CSP without JavaScript eval');
   check(errors.length===0,width+' no browser exceptions: '+errors.join(', '));
-  await page.screenshot({path:join(root,'avi-'+width+'.png')});await context.close();
+  await page.screenshot({path:join(root,'avi-'+width+'.png')});await context.unrouteAll({behavior:'wait'});await context.close();
  }
  console.log(JSON.stringify({checks,root,result:'passed'}));
 }catch(error){if(lastPage&&!lastPage.isClosed()){await lastPage.screenshot({path:join(root,'failure.png')}).catch(()=>{});console.error(await lastPage.locator('body').innerText());console.error(await lastPage.locator('.player video').evaluate(v=>({src:v.currentSrc,time:v.currentTime,paused:v.paused,ready:v.readyState,duration:v.duration,width:v.videoWidth,height:v.videoHeight,error:v.error?.message})).catch(()=>null));}console.error('AVI artifacts:',root);throw error;}
