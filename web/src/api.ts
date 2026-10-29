@@ -66,10 +66,10 @@ export const api = {
     const folder = params.folder === undefined ? null : String(params.folder);
     if (search) items = items.filter((item) => `${item.title} ${item.filename} ${item.folder}`.toLocaleLowerCase().includes(search));
     if (libraryId !== null) items = items.filter((item) => item.library_id === libraryId);
-    if (folder !== null) items = items.filter((item) => item.folder === folder || item.folder.startsWith(`${folder}/`));
+    if (folder !== null) items = items.filter((item) => item.folder === folder || params.recursive!==0&&params.recursive!=='0'&&item.folder.startsWith(`${folder}/`));
     if (params.kind) items = items.filter((item) => item.kind === params.kind);
     if (String(params.liked ?? '') === '1') items = items.filter((item) => Boolean(item.liked));
-    items.sort(compare((params.sort as SortKey | undefined) ?? 'title'));
+    items.sort(params.sort==='random'&&params.seed!==undefined?(a,b)=>shortsRank(a.id,Number(params.seed))-shortsRank(b.id,Number(params.seed))||a.id-b.id:compare((params.sort as SortKey | undefined) ?? 'title'));
     const offset = Number(params.offset ?? 0);
     const limit = Number(params.limit ?? items.length);
     return items.slice(offset, offset + limit);
