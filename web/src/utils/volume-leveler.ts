@@ -119,7 +119,6 @@ export class VolumeLeveler {
       graph.enable(this.enabled);
       element.addEventListener('loadstart', graph.reset); element.addEventListener('seeking', graph.reset);
       this.graphs.set(element, graph);
-      this.volume(element,element.volume,element.muted);
     }
   }
   has(element: HTMLMediaElement) { return this.graphs.has(element); }

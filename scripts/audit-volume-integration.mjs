@@ -24,7 +24,9 @@ try{
       return URL.createObjectURL(new Blob([bytes],{type:'audio/wav'}));
     };
     const video=document.body.appendChild(document.createElement('video'));video.loop=true;video.volume=.01;video.src=wav(.8);
-    const leveler=new VolumeLeveler();leveler.bind([video]);leveler.enable(true);await leveler.resume();await video.play();
+    const leveler=new VolumeLeveler();leveler.bind([video]);
+    const initialOutput=leveler.graphs.get(video).output.gain.value;
+    leveler.volume(video,.01,false);leveler.enable(true);await leveler.resume();await video.play();
     const meter=leveler.context.createAnalyser();meter.fftSize=2048;
     leveler.graphs.get(video).output.connect(meter);
     const worklet=URL.createObjectURL(new Blob([`registerProcessor('measure',class extends AudioWorkletProcessor {
@@ -50,9 +52,10 @@ try{
     const nativeVolume=video.volume;
     const unrelated=document.createElement('video');unrelated.volume=.1;leveler.volume(unrelated,1,false);
     const untouched=unrelated.volume;
-    leveler.dispose();video.pause();video.remove();return {results,peakAfterLowering,mastering,muted,unmuted,bypass,restored,noise,nativeVolume,untouched};
+    leveler.dispose();video.pause();video.remove();return {initialOutput,results,peakAfterLowering,mastering,muted,unmuted,bypass,restored,noise,nativeVolume,untouched};
   },graph);
   console.log(JSON.stringify(results,null,2));
+  assert.equal(results.initialOutput,0,'new graphs stay silent until the requested output volume is applied');
   for(let index=0;index<results.results.length-1;index++){
     const current=results.results[index],next=results.results[index+1];
     assert.ok(next.volume>current.volume?next.rms>current.rms:next.rms<current.rms,'real media output follows the manual volume direction');

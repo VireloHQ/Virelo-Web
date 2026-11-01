@@ -19,6 +19,7 @@ export function useVolumeLeveling(videoRef: RefObject<HTMLVideoElement | null>, 
     try {
       leveler = current.current ??= new VolumeLeveler();
       leveler.bind(elements);
+      for(const element of elements)leveler.volume(element,controls.volume,controls.muted||Boolean(source&&element===video));
       leveler.enable(enabled);
     } catch {
       current.current?.enable(false);

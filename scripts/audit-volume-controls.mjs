@@ -68,6 +68,7 @@ try {
         React.createElement('audio', { key: source, ref: audio, src: source || undefined, loop: true, onVolumeChange: event => leveling.onVolumeChange(event.currentTarget) }));
     }
     const root = (dom.createRoot || dom.default.createRoot)(document.getElementById('fixture'));
+    const render = source => root.render(React.createElement(React.StrictMode, null, React.createElement(Fixture, { source })));
     const checks = [];
     const check = (condition, label) => { if (!condition) throw new Error(label); checks.push(label); };
     const wait = async (predicate, label) => {
@@ -76,7 +77,7 @@ try {
     };
     const settle = () => new Promise(done => setTimeout(done, 100));
     const gain = element => leveler.graphs.get(element).output.gain.value;
-    root.render(React.createElement(Fixture));
+    render();
     await wait(() => document.querySelector('video')?.currentTime > .1, 'initial media playback');
     check(Math.abs(firstPlayVolume - .03) < .000001, 'saved low manual volume is applied before the first play call');
     const video = document.querySelector('video');
@@ -90,14 +91,14 @@ try {
     controls.setMuted(false); await settle();
     check(Math.abs(gain(video) - .03) < .000001, 'unmuting preserves saved attenuation');
     for (const source of urls.slice(1)) {
-      root.render(React.createElement(Fixture, { source })); await settle();
+      render(source); await settle();
       const audio = document.querySelector('audio');
       await wait(() => !audio.paused && audio.currentTime > .05, 'selected audio playback');
       check(video.muted && gain(video) === 0 && !audio.muted && Math.abs(gain(audio) - .03) < .000001,
         'new/replaced audio elements inherit volume while the video soundtrack stays silent');
       check(leveler.graphs.size === 2, 'replacing an audio element releases the previous graph');
     }
-    root.render(React.createElement(Fixture)); await settle();
+    render(); await settle();
     check(!video.muted && Math.abs(gain(video) - .03) < .000001, 'returning to original audio retains the manual level');
     video.volume = .07; await settle();
     check(controls.volume === .07 && video.volume === 1 && Math.abs(gain(video) - .07) < .000001,
