@@ -78,6 +78,10 @@ try {
             check(menu.x >= 0 && menu.x + menu.width <= width, 'language choices fit the mobile viewport');
             if (width === 390) await page.screenshot({ path: join(screenshots, locale.code + '-language-menu.png') });
             await page.keyboard.press('Escape');
+            await page.getByRole('listbox').waitFor({state:'hidden'});
+            // Select restores trigger focus on the next animation frame.
+            await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
+            await page.waitForFunction(()=>document.activeElement===document.querySelector('.public-language-select .picker-trigger'));
           }
           const faq = await page.locator('.landing-faq details').evaluateAll(nodes => nodes.map(node => ({
             name: node.querySelector('summary').textContent, answer: node.querySelector('p').textContent
