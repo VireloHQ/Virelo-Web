@@ -90,6 +90,7 @@ try {
           check(cta.y + cta.height <= (width > 760 ? 1000 : 844), locale.code + ' primary action in first screen');
           await page.getByRole('tab', { name: text(locale, 'Library'), exact: true }).focus();
           await page.keyboard.press('ArrowRight');
+          await page.locator('#preview-tab-player[aria-selected="true"]').waitFor();
           check(await page.getByRole('tab', { name: text(locale, 'Player'), exact: true }).getAttribute('aria-selected') === 'true', 'localized keyboard preview');
           await page.getByRole('tab', { name: text(locale, 'Run locally'), exact: true }).click();
           check(await page.locator('.landing-cli-features li').count() === 3, 'server-only features belong to the CLI panel');
