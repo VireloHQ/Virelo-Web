@@ -27,6 +27,9 @@ the existing React landing/guide components into ten static HTML files. It uses
 eager, data-free routes and loads translations before rendering and hydration;
 it does not depend on a live SSR server or provide different content to bots.
 The private player retains a separate, non-indexable app.html shell.
+Static rendering disables the router's inline scroll-restoration script, while
+client-side restoration stays enabled. Public HTML must contain no executable
+inline scripts; the preview audit enforces the same CSP as the production host.
 
 Public routes, metadata and schema are defined in web/src/public-site.ts.
 Localized search copy lives in web/src/i18n/public-seo.json; visible UI copy stays

@@ -10,6 +10,9 @@ test('all ten public pages contain localized, crawlable HTML and reciprocal sear
     const file = page.path === '/' ? 'index.html' : page.path.slice(1) + '.html';
     const html = await readFile(new URL('../dist/' + file, import.meta.url), 'utf8');
     assertPublicHtml(html, page);
+    for (const script of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)) {
+      if (!script[1].includes('application/ld+json')) assert.equal(script[2].trim(), '', page.path + ': no executable inline script under the production CSP');
+    }
     titles.add(page.title);
   }
   assert.equal(titles.size, 10);
