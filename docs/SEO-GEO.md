@@ -69,8 +69,10 @@ five viewport widths, keyboard use, copy controls, storage failures and shared
 language preferences. The worker tests isolate each language's offline document.
 
 After deployment, npm run verify:deployment checks all ten live pages, canonical
-and alternate URLs, the current entry filename, sitemap, private shells, crawler
+and alternate URLs, the public entry code, sitemap, private shells, crawler
 policy, product facts, social image and the exact landing-media bytes.
+Dependency chunk hashes are normalized only for the entry-code comparison,
+because Windows and Cloudflare/Linux builds can emit different chunk filenames.
 
 For a hosting-level check, run Wrangler locally against dist and pass its URL to
 the same verifier. Workers' clean-HTML handling redirects .html requests: keep
