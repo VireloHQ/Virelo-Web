@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { loadAppearanceTestModule } from './appearance-test-loader.mjs';
 
 const api = await loadAppearanceTestModule('browser-backup.ts', {
-  './local-library': 'export function openDatabase() { return globalThis.__backupTest.open(); }'
+  './local-library': 'export function openDatabase() { return globalThis.__backupTest.open(); } export function editLibraries(operation) { return operation(); }'
 });
 const INVALID = 'This backup contains invalid or unsafe data.';
 const NOT_EMPTY = 'Library backups can only be imported into an empty browser library.';

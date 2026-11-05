@@ -143,7 +143,7 @@ async function saveAudioAnalysis(snapshot: StoredMedia, file: File, value: strin
   }).finally(() => db.close());
 }
 
-function editLibraries<T>(operation:()=>Promise<T>):Promise<T> {
+export function editLibraries<T>(operation:()=>Promise<T>):Promise<T> {
   const run=()=>navigator.locks?navigator.locks.request('virelo-library-edit',operation):operation();
   const task=libraryEdit.then(run,run);
   libraryEdit=task.catch(()=>{});

@@ -124,6 +124,23 @@ try {
   await newcomer.goto('https://virelo.riyo.me/app/library?search=test');
   await newcomer.waitForURL(url=>url.origin==='https://app.virelo.dev'&&url.pathname==='/library');
   assert.equal(new URL(newcomer.url()).searchParams.get('search'),'test');
+  await loadTools(newcomer);
+  await newcomer.evaluate(()=>{
+    window.otherEdit=window.library.editLibraries(async()=>{
+      window.editStarted=true;await new Promise(resolve=>window.releaseEdit=resolve);
+      const db=await window.library.openDatabase();
+      await new Promise((resolve,reject)=>{const tx=db.transaction('libraries','readwrite');tx.objectStore('libraries').add({id:999,label:'Concurrent folder',path:'Concurrent folder',created_at:0,persistent:false});tx.oncomplete=resolve;tx.onabort=reject;}).finally(()=>db.close());
+    });
+  });
+  await newcomer.waitForFunction(()=>window.editStarted);
+  await newcomer.evaluate(json=>{
+    window.pendingImport=window.backup.readBrowserBackup(new Blob([json])).then(value=>window.backup.importBrowserBackup(value)).then(()=>{window.importOutcome='unexpected success';},error=>{window.importOutcome=error.message;});
+  },original.json);
+  await newcomer.waitForFunction(async()=> (await navigator.locks.query()).pending.some(lock=>lock.name==='virelo-library-edit'));
+  assert.equal(await newcomer.evaluate(()=>window.importOutcome),undefined,'import waits for ongoing folder registration');
+  await newcomer.evaluate(async()=>{window.releaseEdit();await window.otherEdit;await window.pendingImport;});
+  assert.match(await newcomer.evaluate(()=>window.importOutcome),/empty browser library/);
+  assert.deepEqual(await newcomer.evaluate(()=>window.library.listLocalLibraries().then(rows=>rows.map(row=>row.id))),[999]);
   assert.deepEqual(errors,[]);
   console.log('PASS real IndexedDB export/import, old-origin migration, downloads, atomic overwrite guard, settings-only import, reconnect IDs/favorites/progress/playlists, canonical navigation, language handoff, mobile layout and empty-origin redirects');
 } finally { await browser?.close(); server.kill(); }

@@ -1,4 +1,4 @@
-import { openDatabase } from './local-library';
+import { editLibraries, openDatabase } from './local-library';
 import type { MediaItem, Settings } from './types';
 import { isAppearance, normalizeAppearance } from './utils/appearance';
 import { isLocale, LANGUAGE_KEY } from './i18n/locale';
@@ -255,31 +255,35 @@ export async function importBrowserBackup(value: BrowserBackup): Promise<{ prefe
   // Revalidate and copy: callers may have edited the preview before confirming import.
   const backup = validate(value);
   if (new Blob([JSON.stringify(backup)]).size > MAX_BYTES) throw new Error(TOO_LARGE);
-  const db = await openDatabase();
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(backup.kind === 'library' ? [...STORES, 'settings'] : ['settings'], 'readwrite');
-    let failure: Error | undefined;
-    const save = () => {
-      try {
-        backup.libraries.forEach(row => tx.objectStore('libraries').add(row));
-        backup.media.forEach(row => tx.objectStore('media').add({ ...row, thumbnail_path: null, poster_path: null, backdrop_path: null }));
-        backup.playlists.forEach(row => tx.objectStore('playlists').add(row));
-        tx.objectStore('settings').put(backup.settings, 'current');
-      } catch { tx.abort(); }
-    };
-    tx.oncomplete = () => resolve();
-    tx.onabort = () => reject(failure ?? new Error('Could not import browser data. No browser database data was changed.'));
-    if (backup.kind === 'settings') save();
-    else {
-      let pending = STORES.length;
-      const counts = STORES.map(name => tx.objectStore(name).count());
-      counts.forEach(request => { request.onsuccess = () => {
-        if (--pending) return;
-        if (counts.some(count => count.result > 0)) { failure = new Error(NOT_EMPTY); tx.abort(); }
-        else save();
-      }; });
-    }
-  }).finally(() => db.close());
+  const restore = async () => {
+    const db = await openDatabase();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(backup.kind === 'library' ? [...STORES, 'settings'] : ['settings'], 'readwrite');
+      let failure: Error | undefined;
+      const save = () => {
+        try {
+          backup.libraries.forEach(row => tx.objectStore('libraries').add(row));
+          backup.media.forEach(row => tx.objectStore('media').add({ ...row, thumbnail_path: null, poster_path: null, backdrop_path: null }));
+          backup.playlists.forEach(row => tx.objectStore('playlists').add(row));
+          tx.objectStore('settings').put(backup.settings, 'current');
+        } catch { tx.abort(); }
+      };
+      tx.oncomplete = () => resolve();
+      tx.onabort = () => reject(failure ?? new Error('Could not import browser data. No browser database data was changed.'));
+      if (backup.kind === 'settings') save();
+      else {
+        let pending = STORES.length;
+        const counts = STORES.map(name => tx.objectStore(name).count());
+        counts.forEach(request => { request.onsuccess = () => {
+          if (--pending) return;
+          if (counts.some(count => count.result > 0)) { failure = new Error(NOT_EMPTY); tx.abort(); }
+          else save();
+        }; });
+      }
+    }).finally(() => db.close());
+  };
+  // Folder registration allocates IDs across several transactions; share its edit lock.
+  await (backup.kind === 'library' ? editLibraries(restore) : restore());
   // IDB has committed; localStorage is separate and may partially fail. Never claim rollback.
   let preferencesRestored = true;
   for (const [key, value] of Object.entries(backup.preferences)) {
