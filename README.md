@@ -145,6 +145,10 @@ in the separate website project. A successful push alone does not deploy
 a site. When a repository is recreated, reconnect it in the hosting dashboard;
 the same repository URL can refer to a different repository ID.
 
+`node scripts/verify-app-migration.mjs` additionally checks the live domain migration,
+backups, language handoff, mobile settings and offline PWA in disposable Chromium
+profiles. It never opens or modifies your normal browser profile.
+
 ### Workers Builds
 
 The same static build can be hosted with Workers Builds. Reconnect the existing

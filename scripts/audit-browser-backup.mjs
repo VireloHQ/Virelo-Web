@@ -38,13 +38,17 @@ try {
     await window.library.updateStoredMedia(item.id,row=>{row.liked=1;row.progress_position=.2;row.progress_duration=.5;row.title='Saved title';});
     await window.api.renameLibrary(library.id,'My collection');
     const playlist = await window.api.createPlaylist({name:'Watch again',mediaIds:[item.id]});
+    const otherRoot=await root.getDirectoryHandle('Other device',{create:true}),otherHandle=await otherRoot.getDirectoryHandle('Migration videos',{create:true});
+    window.showDirectoryPicker=async()=>otherHandle;
+    const second=await window.library.addLocalLibrary();
     localStorage.setItem('virelo.language.v1','en');
     localStorage.setItem('virelo.queue-layout','vertical');
     const json = await(await window.backup.exportBrowserData('library')).text();
-    return {libraryId:library.id,mediaId:item.id,playlistId:playlist.id,json};
+    return {libraryId:library.id,secondLibraryId:second.id,mediaId:item.id,playlistId:playlist.id,json};
   });
   const parsed = JSON.parse(original.json);
   assert.equal(parsed.media[0].liked,1); assert.equal(parsed.libraries[0].label,'My collection');
+  assert.equal(parsed.libraries.length,2);assert.equal(parsed.libraries[0].path,parsed.libraries[1].path);
   assert.ok(!original.json.includes('blob:') && !original.json.includes('"handle"') && !original.json.includes('"thumbnail_path"'));
   await page.goto('https://virelo.riyo.me/app/watch/'+original.mediaId+'?queue=true');
   await page.getByRole('heading',{name:'Virelo has moved'}).waitFor();
@@ -81,6 +85,16 @@ try {
   assert.equal(reconnect.lib.connected,true); assert.equal(reconnect.media[0].id,original.mediaId);
   assert.equal(reconnect.media[0].liked,1); assert.equal(reconnect.media[0].progress_position,.2);
   assert.equal((await page.evaluate(id=>window.api.playlist(id),original.playlistId)).items[0].id,original.mediaId);
+  const duplicate=await page.evaluate(async id=>{
+    const root=await navigator.storage.getDirectory(),handle=await root.getDirectoryHandle('Migration videos');window.showDirectoryPicker=async()=>handle;
+    try{await window.library.reconnectLocalLibrary(id);return '';}catch(error){return error.message;}
+  },original.secondLibraryId);
+  assert.match(duplicate,/already registered/,'confirmed duplicate directories are still blocked');
+  const second=await page.evaluate(async id=>{
+    const root=await navigator.storage.getDirectory(),parent=await root.getDirectoryHandle('Other device',{create:true}),handle=await parent.getDirectoryHandle('Migration videos',{create:true});
+    window.showDirectoryPicker=async()=>handle;return window.library.reconnectLocalLibrary(id);
+  },original.secondLibraryId);
+  assert.equal(second.connected,true);
 
   await page.evaluate(async()=>{
     const settings=await window.backup.readBrowserBackup(await window.backup.exportBrowserData('settings'));
