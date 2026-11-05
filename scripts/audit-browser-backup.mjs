@@ -61,8 +61,8 @@ try {
   // Opening the chooser is handled through setInputFiles; no real user data is selected.
   await page.locator('input[type=file]').setInputFiles({name:'backup.json',mimeType:'application/json',buffer:Buffer.from(original.json)});
   await page.getByRole('heading',{name:'Import backup?'}).waitFor();
-  await page.getByRole('dialog').getByRole('button',{name:'Import',exact:true}).click();
-  await page.waitForLoadState('load'); await page.getByRole('heading',{name:'Export / Import',exact:true}).waitFor(); await loadTools(page);
+  await Promise.all([page.waitForEvent('load'), page.getByRole('dialog').getByRole('button',{name:'Import',exact:true}).click()]);
+  await page.getByRole('heading',{name:'Export / Import',exact:true}).waitFor(); await loadTools(page);
   const restored = await page.evaluate(async()=>({media:await window.library.listStoredMedia(),libraries:await window.library.listLocalLibraries(),playlists:await window.api.playlists(),layout:localStorage.getItem('virelo.queue-layout')}));
   assert.equal(restored.media[0].id,original.mediaId); assert.equal(restored.media[0].liked,1);
   assert.equal(restored.media[0].progress_position,.2); assert.equal(restored.media[0].title,'Saved title');

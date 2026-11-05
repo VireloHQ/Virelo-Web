@@ -272,10 +272,19 @@ const corruptions = [
   ['bad audio analysis', value => { value.media[0].audio_loudness = '{"version":5}'; }],
   ['audio analysis secret property', value => { value.media[0].audio_loudness = JSON.stringify({ version: 1, size: 2048, mtime: 1000, defaultAudioStream: null, tracks: [], token: 'secret' }); }]
 ];
-for (const unsafe of ['/absolute/video.mp4', '../video.mp4', 'Shows/../video.mp4', 'C:\\private\\video.mp4', 'file:///private/video.mp4', 'blob:secret', 'https://example.com/video.mp4', 'Shows//video.mp4', './video.mp4', '%2e%2e/video.mp4', '\\\\server\\video.mp4']) {
+for (const unsafe of ['/absolute/video.mp4', '../video.mp4', 'Shows/../video.mp4', 'C:\\private\\video.mp4', 'file:///private/video.mp4', 'blob:secret', 'https://example.com/video.mp4', 'Shows//video.mp4', './video.mp4', '\\\\server\\video.mp4']) {
   corruptions.push(['unsafe source path ' + unsafe, value => { value.media[0].source_path = unsafe; }]);
   corruptions.push(['unsafe folder label path ' + unsafe, value => { value.libraries[0].folderLabels = { [unsafe]: 'Label' }; }]);
 }
+
+test('literal filenames keep percent signs, tildes and Unix punctuation without URL decoding', async () => {
+  const value=fixture(), source='~Clips%2e%2e/Scene: why?.mp4', item=value.media[0];
+  value.libraries[0].path='~Videos?'; value.libraries[0].folderLabels={'~Clips%2e%2e':'Clips'};
+  Object.assign(item,{id:stableId('7:'+source),path:source,source_path:source,filename:'Scene: why?.mp4',folder:'~Clips%2e%2e'});
+  const result=await read(value);
+  assert.equal(result.media[0].source_path,source);
+  assert.equal(result.libraries[0].path,'~Videos?');
+});
 for (const [name, corrupt] of corruptions) {
   test(`rejects ${name} on read and on direct import before any storage access`, async t => {
     const env = environment(t), value = fixture(); corrupt(value);

@@ -53,8 +53,8 @@ function number(value: unknown, integer = false, minimum = 0, maximum = Number.M
 }
 function path(value: unknown, empty = false): string {
   const result = libraryFolder(text(value));
-  check((empty || result.length > 0) && !/[:\\?\u0000-\u001f\u007f]/.test(result) && !result.startsWith('~')
-    && !/%(?:2e|2f|5c|00)/i.test(result));
+  // These are literal handle-relative names, not URLs: do not decode percent signs or expand '~'.
+  check((empty || result.length > 0) && !/^(?:[a-z]:\/|(?:blob|file|https?):)/i.test(result));
   return result;
 }
 function rows(value: unknown, maximum: number): unknown[] {
