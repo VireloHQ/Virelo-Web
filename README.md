@@ -4,6 +4,8 @@
   <p>Turn a local video folder into a private streaming-style library, entirely in your browser.</p>
 </div>
 
+> **Development has moved.** The browser player now lives in [VireloHQ/Virelo → apps/web](https://github.com/VireloHQ/Virelo/tree/main/apps/web). File new issues and pull requests in [VireloHQ/Virelo](https://github.com/VireloHQ/Virelo). The live player remains at [app.virelo.dev](https://app.virelo.dev); no library migration is needed for this repository change.
+
 ## What it does
 
 Virelo Web runs at [app.virelo.dev](https://app.virelo.dev). Choose a folder and the app builds a local library with thumbnails, search, favorites, watch progress, queues, and Shorts. The product website is [virelo.dev](https://virelo.dev).
